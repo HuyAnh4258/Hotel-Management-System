@@ -1,0 +1,18 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gradle
+hms_backend/.gradle/
+hms_backend/build/
+hms_backend/bin/
+
+# Flutter
+hms_frontend/.dart_tool/
+hms_frontend/build/
+hms_frontend/.flutter-plugins-dependencies
