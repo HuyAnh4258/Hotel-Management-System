@@ -1,9 +1,9 @@
 # HMS — Hotel Management System
 
-Hệ thống quản lý khách sạn đa nền tảng.
+Hệ thống quản lý khách sạn đa nền tảng — Multi-Client Architecture.
 
 - **Backend:** Java 26 + Spring Boot 4.1 + MySQL 8.0
-- **Frontend:** Flutter 3.x + GetX + Dio
+- **Frontend:** 4 Flutter apps + 1 shared package (GetX + Dio)
 
 ---
 
@@ -11,12 +11,18 @@ Hệ thống quản lý khách sạn đa nền tảng.
 
 ```
 hms/
-├── hms_backend/          # Spring Boot REST API
-├── hms_frontend/         # Flutter App (Android, iOS, Web, Desktop)
-├── HotelDB_Schema.sql    # Database schema + seed data
-├── DATA_DESIGN.md        # Quy ước thiết kế dữ liệu (ID, enum, role, soft delete)
-├── PROJECT_STRUCTURE.md  # Cấu trúc code & phân bổ module
-└── SCHEMA_SPEC.md        # Spec gốc 22 bảng từ BA
+├── hms_backend/                         # Spring Boot REST API
+├── frontends/
+│   ├── hms_shared/                      # Package dùng chung
+│   ├── management_desktop/              # Desktop: Owner, Manager, Receptionist
+│   ├── staff_mobile/                    # Mobile: Service Staff, Housekeeper
+│   ├── booking_mobile/                  # Mobile: Guest (iOS/Android)
+│   └── booking_web/                     # Web: Guest
+├── HotelDB_Schema.sql
+├── DATA_DESIGN.md
+├── PROJECT_STRUCTURE.md
+├── SCHEMA_SPEC.md
+└── README.md
 ```
 
 ---
@@ -26,6 +32,7 @@ hms/
 | Công cụ | Phiên bản |
 |---|---|
 | Java | 26+ |
+| Gradle | 9.4.0+ |
 | MySQL | 8.0+ |
 | Flutter | 3.x+ |
 | Dart | 3.12+ |
@@ -40,40 +47,48 @@ hms/
 mysql -u root -p < HotelDB_Schema.sql
 ```
 
-Cấu hình biến môi trường trước khi chạy.
-
 ### 2. Backend
 
 ```sh
 cd hms_backend
+
+# Set biến môi trường
+# Windows: set MYSQL_USERNAME=root && set MYSQL_PASSWORD=yourpass
+# macOS/Linux: export MYSQL_USERNAME=root && export MYSQL_PASSWORD=yourpass
+
 ./gradlew bootRun        # macOS/Linux
 gradlew.bat bootRun      # Windows
 ```
 
-API docs tại: http://localhost:8080/swagger-ui.html
+API docs: http://localhost:8080/swagger-ui.html
 
 ### 3. Frontend
 
 ```sh
-cd hms_frontend
-flutter pub get
-flutter run
+cd frontends
+
+# Cài dependency cho shared package
+cd hms_shared && dart pub get && cd ..
+
+# Chạy từng app
+cd management_desktop && flutter pub get && flutter run -d windows
+cd staff_mobile       && flutter pub get && flutter run
+cd booking_mobile     && flutter pub get && flutter run
+cd booking_web        && flutter pub get && flutter run -d chrome
 ```
 
 ---
 
-## 6 Module nghiệp vụ
+## 4 App × 6 Role
 
-| Module | Chức năng |
-|---|---|
-| **authentication** | Đăng nhập, đăng ký, JWT, phân quyền (6 roles) |
-| **employee_management** | Quản lý nhân viên |
-| **property_management** | Quản lý phòng, loại phòng, bảo trì |
-| **booking_management** | Đặt phòng, thanh toán, voucher, feedback |
-| **catalogue_management** | Dịch vụ, order, kho vật tư |
-| **operation_analysis** | Audit log, báo cáo |
+| App | Nền tảng | Người dùng |
+|---|---|---|
+| **management_desktop** | Windows | Owner, Manager, Receptionist |
+| **staff_mobile** | iOS/Android | Service Staff, Housekeeper |
+| **booking_mobile** | iOS/Android | Guest |
+| **booking_web** | Web | Guest |
 
-### 6 Role người dùng
+### 6 Role
 
 | Role | Mô tả |
 |---|---|
@@ -92,6 +107,7 @@ flutter run
 - Spring Boot 4.1, Spring Security, Spring Data JPA
 - JWT Authentication, BCrypt
 - Swagger/OpenAPI, WebSocket
+- VNPay integration, Gmail SMTP
 
 **Frontend:**
 - Flutter, GetX (state management + routing)

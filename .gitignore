@@ -13,6 +13,7 @@ hms_backend/build/
 hms_backend/bin/
 
 # Flutter
-hms_frontend/.dart_tool/
-hms_frontend/build/
-hms_frontend/.flutter-plugins-dependencies
+frontends/*/.dart_tool/
+frontends/*/build/
+frontends/*/.flutter-plugins-dependencies
+frontends/*/.flutter-plugins
