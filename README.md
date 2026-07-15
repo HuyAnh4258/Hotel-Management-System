@@ -3,7 +3,7 @@
 Hệ thống quản lý khách sạn đa nền tảng — Multi-Client Architecture.
 
 - **Backend:** Java 26 + Spring Boot 4.1 + MySQL 8.0
-- **Frontend:** 4 Flutter apps + 1 shared package (GetX + Dio)
+- **Frontend:** 2 Flutter apps + 1 shared package (GetX + Dio)
 
 ---
 
@@ -11,13 +11,11 @@ Hệ thống quản lý khách sạn đa nền tảng — Multi-Client Architect
 
 ```
 hms/
-├── hms_backend/                         # Spring Boot REST API
+├── hms_backend/                    # Spring Boot REST API
 ├── frontends/
-│   ├── hms_shared/                      # Package dùng chung
-│   ├── management_desktop/              # Desktop: Owner, Manager, Receptionist
-│   ├── staff_mobile/                    # Mobile: Service Staff, Housekeeper
-│   ├── booking_mobile/                  # Mobile: Guest (iOS/Android)
-│   └── booking_web/                     # Web: Guest
+│   ├── hms_shared/                 # Package dùng chung (models, API, auth)
+│   ├── management_app/             # Management App (5 role, build Mobile + Desktop)
+│   └── booking_app/                # Booking App (Guest, build Mobile + Web)
 ├── HotelDB_Schema.sql
 ├── DATA_DESIGN.md
 ├── PROJECT_STRUCTURE.md
@@ -56,8 +54,7 @@ cd hms_backend
 # Windows: set MYSQL_USERNAME=root && set MYSQL_PASSWORD=yourpass
 # macOS/Linux: export MYSQL_USERNAME=root && export MYSQL_PASSWORD=yourpass
 
-./gradlew bootRun        # macOS/Linux
-gradlew.bat bootRun      # Windows
+./gradlew bootRun
 ```
 
 API docs: http://localhost:8080/swagger-ui.html
@@ -65,51 +62,42 @@ API docs: http://localhost:8080/swagger-ui.html
 ### 3. Frontend
 
 ```sh
-cd frontends
+cd frontends/hms_shared && dart pub get && cd ..
 
-# Cài dependency cho shared package
-cd hms_shared && dart pub get && cd ..
+# Management App — Mobile hoặc Desktop (phân quyền runtime)
+cd management_app && flutter pub get
+flutter run -d windows     # Desktop
+flutter run -d android     # Mobile
 
-# Chạy từng app
-cd management_desktop && flutter pub get && flutter run -d windows
-cd staff_mobile       && flutter pub get && flutter run
-cd booking_mobile     && flutter pub get && flutter run
-cd booking_web        && flutter pub get && flutter run -d chrome
+# Booking App — Mobile hoặc Web
+cd booking_app && flutter pub get
+flutter run -d android     # Mobile
+flutter run -d chrome      # Web
 ```
 
 ---
 
-## 4 App × 6 Role
+## 2 App × 6 Role
 
-| App | Nền tảng | Người dùng |
-|---|---|---|
-| **management_desktop** | Windows | Owner, Manager, Receptionist |
-| **staff_mobile** | iOS/Android | Service Staff, Housekeeper |
-| **booking_mobile** | iOS/Android | Guest |
-| **booking_web** | Web | Guest |
+```
+management_app                    booking_app
+┌─────────────────────┐          ┌──────────────┐
+│ OWNER                │          │              │
+│ MANAGER              │          │    GUEST     │
+│ RECEPTIONIST         │          │              │
+│ SERVICE_STAFF        │          │  Mobile      │
+│ HOUSEKEEPER          │          │  Web         │
+│                      │          └──────────────┘
+│ Mobile + Desktop     │
+└─────────────────────┘
+```
 
-### 6 Role
-
-| Role | Mô tả |
-|---|---|
-| OWNER | Chủ khách sạn — toàn quyền |
-| MANAGER | Quản lý — vận hành, báo cáo |
-| RECEPTIONIST | Lễ tân — check-in/out, booking, payment |
-| SERVICE_STAFF | Nhân viên phục vụ — xử lý Order |
-| HOUSEKEEPER | Nhân viên buồng phòng — dọn phòng, bảo trì |
-| GUEST | Khách — đặt phòng, gọi dịch vụ |
+Phân quyền bằng `role_guard` middleware — cùng 1 app, khác role thấy khác giao diện.
 
 ---
 
 ## Tech Stack
 
-**Backend:**
-- Spring Boot 4.1, Spring Security, Spring Data JPA
-- JWT Authentication, BCrypt
-- Swagger/OpenAPI, WebSocket
-- VNPay integration, Gmail SMTP
+**Backend:** Spring Boot 4.1, Spring Security, Spring Data JPA, JWT, BCrypt, Swagger, WebSocket, VNPay, Gmail SMTP
 
-**Frontend:**
-- Flutter, GetX (state management + routing)
-- Dio (HTTP client), flutter_secure_storage
-- json_serializable (model generation)
+**Frontend:** Flutter, GetX, Dio, flutter_secure_storage, json_serializable
