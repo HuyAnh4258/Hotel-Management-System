@@ -14,14 +14,14 @@ spring:
   # Cấu hình JPA / Hibernate
   jpa:
     hibernate:
-      # 'update': Tự động tạo/cập nhật bảng trong DB dựa trên các class Entity bạn code
-      # (rất tiện khi đang dev, nhưng khi lên production thường đổi thành 'validate' hoặc 'none')
-      ddl-auto: update
+      # 'validate': Chỉ kiểm tra Entity có khớp DB hay không, không tự ý tạo thêm cột/bảng
+      ddl-auto: validate
     show-sql: true # Bật tính năng này để console in ra các câu lệnh SQL, rất dễ debug
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
 # Cấu hình đường dẫn cho Swagger (Tài liệu API)
 springdoc:
