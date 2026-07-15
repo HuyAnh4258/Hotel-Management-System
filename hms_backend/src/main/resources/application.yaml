@@ -7,8 +7,8 @@ spring:
   datasource:
     # Thay 'HotelDB_Schema' bằng tên database thực tế của bạn nếu khác
     url: jdbc:mysql://localhost:3306/HotelDB_Schema?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
-    username: ${MYSQL_USERNAME}
-    password: ${MYSQL_PASSWORD}
+    username: root
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # Cấu hình JPA / Hibernate
@@ -16,7 +16,7 @@ spring:
     hibernate:
       # 'update': Tự động tạo/cập nhật bảng trong DB dựa trên các class Entity bạn code
       # (rất tiện khi đang dev, nhưng khi lên production thường đổi thành 'validate' hoặc 'none')
-      ddl-auto: update 
+      ddl-auto: update
     show-sql: true # Bật tính năng này để console in ra các câu lệnh SQL, rất dễ debug
     properties:
       hibernate:
