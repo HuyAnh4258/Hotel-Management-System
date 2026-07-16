@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -87,12 +88,58 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<RoomSummary> getRoomsByStatus(String status) {
+        return roomRepository.findByIsActiveTrue().stream()
+                .filter(room -> status == null
+                        || status.isBlank()
+                        || "ALL".equalsIgnoreCase(status)
+                        || (room.getStatus() != null && room.getStatus().equalsIgnoreCase(status)))
+                .map(this::toRoomSummary)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RoomSummary> getAvailableRoomsByDateRange(LocalDate checkin, LocalDate checkout) {
+        if (checkin == null || checkout == null) {
+            throw new IllegalArgumentException("checkin and checkout are required");
+        }
+        if (checkout.isBefore(checkin) || checkout.isEqual(checkin)) {
+            throw new IllegalArgumentException("checkout must be after checkin");
+        }
+
+        LocalDateTime checkinDateTime = checkin.atStartOfDay();
+        LocalDateTime checkoutDateTime = checkout.atStartOfDay();
+
+        return roomRepository.findByIsActiveTrue().stream()
+                .filter(room -> room.getStatus() == null || "AVAILABLE".equalsIgnoreCase(room.getStatus()))
+                .filter(room -> room.getRoomId() != null)
+                .filter(room -> roomBookingRepository.findOverlappingBookings(
+                        room.getRoomId(),
+                        checkinDateTime,
+                        checkoutDateTime
+                ).isEmpty())
+                .map(this::toRoomSummary)
+                .toList();
+    }
+
     @Transactional
     public BookingSummary updateBookingStatus(String bookingId, String status) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
         setField(booking, "status", status);
         booking = bookingRepository.save(booking);
+
+        if ("CHECKED_OUT".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status)) {
+            roomBookingRepository.findByBookingId(bookingId).forEach(roomBooking -> {
+                Room room = roomBooking.getRoom();
+                if (room != null) {
+                    setField(room, "status", "AVAILABLE");
+                    roomRepository.save(room);
+                }
+            });
+        }
+
         return toBookingSummary(booking);
     }
 
@@ -106,7 +153,8 @@ public class BookingService {
         if (request.expectedCheckin() == null || request.expectedCheckout() == null) {
             throw new IllegalArgumentException("expectedCheckin and expectedCheckout are required");
         }
-        if (request.expectedCheckout().isBefore(request.expectedCheckin())) {
+        if (request.expectedCheckout().isBefore(request.expectedCheckin())
+                || request.expectedCheckout().isEqual(request.expectedCheckin())) {
             throw new IllegalArgumentException("expectedCheckout must be after expectedCheckin");
         }
         if (request.roomIds() == null || request.roomIds().isEmpty()) {
@@ -118,12 +166,19 @@ public class BookingService {
 
         Voucher voucher = resolveVoucher(request.voucherCode());
 
+        LocalDateTime checkinDateTime = request.expectedCheckin().atStartOfDay();
+        LocalDateTime checkoutDateTime = request.expectedCheckout().atStartOfDay();
+        long nights = ChronoUnit.DAYS.between(request.expectedCheckin(), request.expectedCheckout());
+        if (nights <= 0) {
+            throw new IllegalArgumentException("Booking nights must be greater than zero");
+        }
+
         Booking booking = new Booking();
         setField(booking, "bookingId", generateId("BOK", 20));
         setField(booking, "guest", guest);
         setField(booking, "voucher", voucher);
-        setField(booking, "expectedCheckin", request.expectedCheckin().atStartOfDay());
-        setField(booking, "expectedCheckout", request.expectedCheckout().atStartOfDay());
+        setField(booking, "expectedCheckin", checkinDateTime);
+        setField(booking, "expectedCheckout", checkoutDateTime);
         setField(booking, "status", "PENDING");
         setField(booking, "createdAt", LocalDateTime.now());
 
@@ -134,18 +189,24 @@ public class BookingService {
             Room room = roomRepository.findById(roomId)
                     .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
 
-            BigDecimal roomPrice = room.getRoomType() != null && room.getRoomType().getBasePrice() != null
+            ensureRoomIsAvailable(roomId, checkinDateTime, checkoutDateTime);
+
+            BigDecimal roomPricePerNight = room.getRoomType() != null && room.getRoomType().getBasePrice() != null
                     ? room.getRoomType().getBasePrice()
                     : BigDecimal.ZERO;
-            totalAmount = totalAmount.add(roomPrice);
+            BigDecimal roomTotalPrice = roomPricePerNight.multiply(BigDecimal.valueOf(nights));
+            totalAmount = totalAmount.add(roomTotalPrice);
 
             RoomBooking roomBooking = new RoomBooking();
             setField(roomBooking, "roomBookingId", generateId("RMB", 20));
             setField(roomBooking, "room", room);
             setField(roomBooking, "booking", booking);
-            setField(roomBooking, "priceAtBooking", roomPrice);
+            setField(roomBooking, "priceAtBooking", roomTotalPrice);
             setField(roomBooking, "status", "RESERVED");
             roomBookings.add(roomBooking);
+
+            setField(room, "status", "BOOKED");
+            roomRepository.save(room);
         }
 
         setField(booking, "totalAmount", totalAmount);
@@ -211,6 +272,16 @@ public class BookingService {
         return value.substring(0, maxLength);
     }
 
+    private void ensureRoomIsAvailable(String roomId, LocalDateTime checkin, LocalDateTime checkout) {
+        boolean hasOverlap = !roomBookingRepository.findOverlappingBookings(roomId, checkin, checkout).isEmpty();
+        if (hasOverlap) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Room is already booked in the selected date range: " + roomId
+            );
+        }
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             Field field = target.getClass().getDeclaredField(fieldName);
@@ -244,8 +315,15 @@ public class BookingService {
     }
 
     private BookingSummary toBookingSummary(Booking booking) {
-        List<String> roomIds = roomBookingRepository.findByBookingId(booking.getBookingId()).stream()
-                .map(roomBooking -> roomBooking.getRoom().getRoomId())
+        List<String> roomNames = roomBookingRepository.findByBookingId(booking.getBookingId()).stream()
+                .map(roomBooking -> {
+                    Room room = roomBooking.getRoom();
+                    if (room == null) {
+                        return "";
+                    }
+                    return room.getRoomName() + (room.getRoomId() != null ? " (" + room.getRoomId() + ")" : "");
+                })
+                .filter(value -> value != null && !value.isBlank())
                 .toList();
 
         return new BookingSummary(
@@ -256,7 +334,7 @@ public class BookingService {
                 booking.getExpectedCheckout() != null ? booking.getExpectedCheckout().toString() : "",
                 booking.getStatus(),
                 booking.getTotalAmount(),
-                roomIds
+                roomNames
         );
     }
 }

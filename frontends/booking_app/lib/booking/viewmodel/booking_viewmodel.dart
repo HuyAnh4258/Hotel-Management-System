@@ -32,6 +32,33 @@ class BookingApi {
         .toList();
   }
 
+  static Future<List<RoomModel>> getAvailableRooms({
+    required String checkin,
+    required String checkout,
+  }) async {
+    final response = await _dio.get(
+      '/available-rooms',
+      queryParameters: {'checkin': checkin, 'checkout': checkout},
+    );
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => RoomModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  static Future<List<RoomModel>> getRoomsByStatus({String? status}) async {
+    final response = await _dio.get(
+      '/rooms',
+      queryParameters: status == null || status.isEmpty
+          ? null
+          : {'status': status},
+    );
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => RoomModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
   static Future<BookingSummary> updateBookingStatus(
     String bookingId,
     String status,
@@ -155,20 +182,38 @@ class RoomTypeModel {
     required this.name,
     required this.description,
     required this.basePrice,
+    required this.imagePath,
   });
 
   final String roomTypeId;
   final String name;
   final String description;
   final double basePrice;
+  final String imagePath;
 
   factory RoomTypeModel.fromJson(Map<String, dynamic> json) {
+    final name = json['typeName']?.toString() ?? json['name']?.toString() ?? '';
     return RoomTypeModel(
       roomTypeId: json['roomTypeId']?.toString() ?? '',
-      name: json['typeName']?.toString() ?? json['name']?.toString() ?? '',
+      name: name,
       description: json['description']?.toString() ?? '',
       basePrice: (json['basePrice'] as num?)?.toDouble() ?? 0,
+      imagePath: _imageForRoomType(name),
     );
+  }
+
+  static String _imageForRoomType(String name) {
+    final normalized = name.toLowerCase().trim();
+    if (normalized.contains('suite')) {
+      return 'asset/images_booking/noi-that-phong-ngu-cao-cap-01.jpg';
+    }
+    if (normalized.contains('deluxe')) {
+      return 'asset/images_booking/khach-san-view-bien-da-nang-2.jpg';
+    }
+    if (normalized.contains('superior')) {
+      return 'asset/images_booking/unnamed.jpg';
+    }
+    return 'asset/images_booking/thiet-ke-noi-that-khach-san-binh-dan-gay-an-tuong-du-khach.jpg';
   }
 }
 

@@ -37,6 +37,26 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingsByDate(targetDate));
     }
 
+    @GetMapping("/available-rooms")
+    public ResponseEntity<?> getAvailableRooms(
+            @RequestParam(name = "checkin") String checkin,
+            @RequestParam(name = "checkout") String checkout
+    ) {
+        return ResponseEntity.ok(
+                bookingService.getAvailableRoomsByDateRange(
+                        LocalDate.parse(checkin),
+                        LocalDate.parse(checkout)
+                )
+        );
+    }
+
+    @GetMapping("/rooms")
+    public ResponseEntity<?> getRoomsByStatus(
+            @RequestParam(name = "status", required = false) String status
+    ) {
+        return ResponseEntity.ok(bookingService.getRoomsByStatus(status));
+    }
+
     @PatchMapping("/{bookingId}/status")
     public ResponseEntity<BookingSummary> updateBookingStatus(
             @PathVariable("bookingId") String bookingId,

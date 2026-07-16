@@ -12,6 +12,8 @@ class RoomTypeDetailPage extends StatelessWidget {
   final RoomTypeModel roomType;
   final List<RoomModel> availableRooms;
 
+  String _formatPrice(double price) => price.toStringAsFixed(0);
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -38,66 +40,134 @@ class RoomTypeDetailPage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: Colors.white),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Stack(
                     children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: scheme.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Icon(
-                          Icons.room_preferences_rounded,
-                          color: scheme.primary,
+                      AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.asset(
+                          roomType.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            color: scheme.primary.withValues(alpha: 0.10),
+                            child: Icon(
+                              Icons.hotel_rounded,
+                              size: 56,
+                              color: scheme.primary,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          roomType.name,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                      Positioned(
+                        left: 16,
+                        bottom: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            roomType.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    roomType.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey.shade700,
-                      height: 1.45,
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Icon(
+                                Icons.room_preferences_rounded,
+                                color: scheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                roomType.name,
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          roomType.description,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: Colors.grey.shade700,
+                                height: 1.45,
+                              ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _InfoChip(
+                                icon: Icons.payments_rounded,
+                                label: 'Giá từ',
+                                value: '${_formatPrice(roomType.basePrice)} đ',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _InfoChip(
+                                icon: Icons.bed_rounded,
+                                label: 'Phòng trống',
+                                value: '${availableRooms.length}',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _DetailInfoRow(
+                          label: 'Mã loại phòng',
+                          value: roomType.roomTypeId.isEmpty
+                              ? 'Chưa có'
+                              : roomType.roomTypeId,
+                        ),
+                        const SizedBox(height: 8),
+                        _DetailInfoRow(
+                          label: 'Mô tả',
+                          value: roomType.description,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _InfoChip(
-                          icon: Icons.payments_rounded,
-                          label: 'Giá từ',
-                          value: roomType.basePrice.toStringAsFixed(0),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _InfoChip(
-                          icon: Icons.bed_rounded,
-                          label: 'Phòng trống',
-                          value: '${availableRooms.length}',
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -116,7 +186,7 @@ class RoomTypeDetailPage extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Chọn “Đặt loại phòng này” để xem danh sách phòng còn trống và tích chọn phòng phù hợp.',
+                      'Chọn “Đặt loại phòng này” để xem danh sách phòng còn trống và chọn phòng phù hợp.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey.shade700,
                         height: 1.4,
@@ -195,6 +265,48 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
+class _DetailInfoRow extends StatelessWidget {
+  const _DetailInfoRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey.shade800,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class BookingFormPage extends StatefulWidget {
   const BookingFormPage({
     super.key,
@@ -220,13 +332,16 @@ class _BookingFormPageState extends State<BookingFormPage> {
   RoomModel? _selectedRoom;
   DateTime? _checkinDate;
   DateTime? _checkoutDate;
+  List<RoomModel> _availableRooms = [];
+  bool _loadingRooms = false;
   bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.availableRooms.isNotEmpty) {
-      _selectedRoom = widget.availableRooms.first;
+    _availableRooms = List<RoomModel>.from(widget.availableRooms);
+    if (_availableRooms.isNotEmpty) {
+      _selectedRoom = _availableRooms.first;
     }
   }
 
@@ -250,6 +365,62 @@ class _BookingFormPageState extends State<BookingFormPage> {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '$day/$month/${value.year}';
+  }
+
+  int? _calculateNights() {
+    if (_checkinDate == null || _checkoutDate == null) return null;
+    return _checkoutDate!.difference(_checkinDate!).inDays;
+  }
+
+  double _dailyRate() => widget.roomType.basePrice;
+
+  double? _calculateTotalAmount() {
+    final nights = _calculateNights();
+    if (nights == null || nights <= 0) return null;
+    return nights * _dailyRate();
+  }
+
+  Future<void> _reloadAvailableRooms() async {
+    if (_checkinDate == null || _checkoutDate == null) return;
+
+    setState(() {
+      _loadingRooms = true;
+    });
+
+    try {
+      final rooms = await BookingApi.getAvailableRooms(
+        checkin: _formatDateForApi(_checkinDate!),
+        checkout: _formatDateForApi(_checkoutDate!),
+      );
+
+      if (!mounted) return;
+      final filteredRooms = rooms
+          .where((room) => room.roomTypeId == widget.roomType.roomTypeId)
+          .toList();
+
+      setState(() {
+        _availableRooms = filteredRooms;
+        if (_selectedRoom != null &&
+            !_availableRooms.any(
+              (room) => room.roomId == _selectedRoom!.roomId,
+            )) {
+          _selectedRoom = _availableRooms.isNotEmpty
+              ? _availableRooms.first
+              : null;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không tải được phòng trống: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingRooms = false;
+        });
+      }
+    }
   }
 
   Future<void> _pickDate({required bool isCheckin}) async {
@@ -284,6 +455,10 @@ class _BookingFormPageState extends State<BookingFormPage> {
         _checkoutController.text = _formatDateForDisplay(picked);
       }
     });
+
+    if (_checkinDate != null && _checkoutDate != null) {
+      await _reloadAvailableRooms();
+    }
   }
 
   Future<void> _submit() async {
@@ -452,13 +627,20 @@ class _BookingFormPageState extends State<BookingFormPage> {
                   ),
                   const SizedBox(height: 18),
                   _RoomSelectionList(
-                    rooms: widget.availableRooms,
+                    rooms: _availableRooms,
                     selectedRoom: _selectedRoom,
                     onSelected: (room) {
                       setState(() {
                         _selectedRoom = room;
                       });
                     },
+                    loading: _loadingRooms,
+                  ),
+                  const SizedBox(height: 16),
+                  _PaymentSummaryCard(
+                    nights: _calculateNights(),
+                    dailyRate: _dailyRate(),
+                    totalAmount: _calculateTotalAmount() ?? 0,
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -480,16 +662,77 @@ class _BookingFormPageState extends State<BookingFormPage> {
   }
 }
 
+class _PaymentSummaryCard extends StatelessWidget {
+  const _PaymentSummaryCard({
+    required this.nights,
+    required this.dailyRate,
+    required this.totalAmount,
+  });
+
+  final int? nights;
+  final double dailyRate;
+  final double totalAmount;
+
+  String _formatMoney(double value) => value.toStringAsFixed(0);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tạm tính trước thanh toán',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            (nights == null || nights! <= 0)
+                ? 'Chọn ngày nhận/trả phòng hợp lệ để tính tiền.'
+                : '${nights!} đêm × ${_formatMoney(dailyRate)} đ = ${_formatMoney(totalAmount)} đ',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey.shade700,
+              height: 1.4,
+            ),
+          ),
+          if (nights != null && nights! > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Giá loại phòng tính theo 1 ngày. Tổng tiền = số đêm × đơn giá.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _RoomSelectionList extends StatelessWidget {
   const _RoomSelectionList({
     required this.rooms,
     required this.selectedRoom,
     required this.onSelected,
+    required this.loading,
   });
 
   final List<RoomModel> rooms;
   final RoomModel? selectedRoom;
   final ValueChanged<RoomModel> onSelected;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -519,7 +762,12 @@ class _RoomSelectionList extends StatelessWidget {
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
           ),
           const SizedBox(height: 12),
-          if (rooms.isEmpty)
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (rooms.isEmpty)
             const Text('Không có phòng nào khả dụng')
           else
             ...rooms.map((room) {
