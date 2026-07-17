@@ -72,6 +72,71 @@ class BookingApi {
     );
   }
 
+  static Future<List<RoomModel>> getChangeableRooms(String bookingId) async {
+    final response = await _dio.get('/$bookingId/changeable-rooms');
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => RoomModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  static Future<BookingSummary> updateBookingDetails(
+    String bookingId,
+    CreateBookingPayload payload,
+  ) async {
+    final response = await _dio.patch('/$bookingId', data: payload.toJson());
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<BookingSummary> changeBookingRoom(
+    String bookingId,
+    String roomId,
+  ) async {
+    final response = await _dio.patch(
+      '/$bookingId/change-room',
+      queryParameters: {'roomId': roomId},
+    );
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<BookingSummary> requestCancelBooking(String bookingId) async {
+    final response = await _dio.patch(
+      '/$bookingId/status',
+      queryParameters: {'status': 'WAITING_APPROVAL'},
+    );
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<BookingSummary> approveCancelBooking(String bookingId) async {
+    final response = await _dio.patch('/$bookingId/approve-cancel');
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<BookingSummary> rejectCancelBooking(String bookingId) async {
+    final response = await _dio.patch('/$bookingId/reject-cancel');
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<BookingSummary> cancelCancelRequest(String bookingId) async {
+    final response = await _dio.patch(
+      '/$bookingId/status',
+      queryParameters: {'status': 'PENDING'},
+    );
+    return BookingSummary.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
   static Future<void> createBooking(CreateBookingPayload payload) async {
     await _dio.post('', data: payload.toJson());
   }
@@ -137,6 +202,7 @@ class BookingSummary {
     required this.bookingId,
     required this.guestName,
     required this.phone,
+    required this.email,
     required this.expectedCheckin,
     required this.expectedCheckout,
     required this.status,
@@ -147,6 +213,7 @@ class BookingSummary {
   final String bookingId;
   final String guestName;
   final String phone;
+  final String email;
   final String expectedCheckin;
   final String expectedCheckout;
   final String status;
@@ -158,6 +225,7 @@ class BookingSummary {
       bookingId: json['bookingId']?.toString() ?? '',
       guestName: json['guestName']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
       expectedCheckin: json['expectedCheckin']?.toString() ?? '',
       expectedCheckout: json['expectedCheckout']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
@@ -168,12 +236,39 @@ class BookingSummary {
     );
   }
 
-  bool canCheckIn(String today) =>
-      expectedCheckin.startsWith(today) && status.toUpperCase() == 'PENDING';
+  bool canCheckIn(String today) {
+    final normalizedStatus = status.toUpperCase();
+    return expectedCheckin.startsWith(today) &&
+        (normalizedStatus == 'PENDING' ||
+            normalizedStatus == 'CANCEL_REJECTED');
+  }
 
-  bool canCheckOut(String today) =>
-      expectedCheckout.startsWith(today) &&
-      status.toUpperCase() == 'CHECKED_IN';
+  bool canCheckOut(String today) {
+    final normalizedStatus = status.toUpperCase();
+    return expectedCheckout.startsWith(today) &&
+        (normalizedStatus == 'CHECKED_IN' ||
+            normalizedStatus == 'CANCEL_REJECTED');
+  }
+
+  bool get canRequestCancel {
+    final normalizedStatus = status.toUpperCase();
+    return normalizedStatus == 'PENDING' || normalizedStatus == 'CHECKED_IN';
+  }
+
+  bool get hasReachedCheckinDeadline {
+    final checkinDateTime = DateTime.tryParse(expectedCheckin);
+    if (checkinDateTime == null) return false;
+    return !DateTime.now().isBefore(checkinDateTime);
+  }
+
+  bool get canCancelCancelRequest => status.toUpperCase() == 'WAITING_APPROVAL';
+
+  bool get isWaitingCancelApproval =>
+      status.toUpperCase() == 'WAITING_APPROVAL';
+
+  bool get isCancelRejected => status.toUpperCase() == 'CANCEL_REJECTED';
+
+  bool get isCancelled => status.toUpperCase() == 'CANCELLED';
 }
 
 class RoomTypeModel {
@@ -224,6 +319,10 @@ class RoomModel {
     required this.roomNumber,
     required this.floor,
     required this.status,
+    this.roomTypeName,
+    this.description,
+    this.basePrice,
+    this.imagePath,
   });
 
   final String roomId;
@@ -231,12 +330,28 @@ class RoomModel {
   final String roomNumber;
   final int floor;
   final String status;
+  final String? roomTypeName;
+  final String? description;
+  final double? basePrice;
+  final String? imagePath;
 
   factory RoomModel.fromJson(Map<String, dynamic> json) {
     final roomTypeJson = json['roomType'];
     final roomTypeId = roomTypeJson is Map
         ? roomTypeJson['roomTypeId']?.toString() ?? ''
         : json['roomTypeId']?.toString() ?? '';
+    final roomTypeName = roomTypeJson is Map
+        ? roomTypeJson['typeName']?.toString() ??
+              roomTypeJson['name']?.toString()
+        : json['roomTypeName']?.toString() ??
+              json['typeName']?.toString() ??
+              json['name']?.toString();
+    final description = roomTypeJson is Map
+        ? roomTypeJson['description']?.toString()
+        : json['description']?.toString();
+    final basePrice = roomTypeJson is Map
+        ? (roomTypeJson['basePrice'] as num?)?.toDouble()
+        : (json['basePrice'] as num?)?.toDouble();
 
     return RoomModel(
       roomId: json['roomId']?.toString() ?? '',
@@ -248,6 +363,12 @@ class RoomModel {
           (json['floorNumber'] as num?)?.toInt() ??
           0,
       status: json['status']?.toString() ?? '',
+      roomTypeName: roomTypeName,
+      description: description,
+      basePrice: basePrice,
+      imagePath: roomTypeName == null
+          ? null
+          : RoomTypeModel._imageForRoomType(roomTypeName),
     );
   }
 }

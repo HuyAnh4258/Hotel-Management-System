@@ -7,6 +7,7 @@ public record BookingSummary(
         String bookingId,
         String guestName,
         String phone,
+        String email,
         String expectedCheckin,
         String expectedCheckout,
         String status,
@@ -19,5 +20,18 @@ public record BookingSummary(
 
     public boolean canCheckOut(String today) {
         return expectedCheckout != null && expectedCheckout.startsWith(today) && "CHECKED_IN".equalsIgnoreCase(status);
+    }
+
+    public boolean canRequestCancel() {
+        return status != null
+                && ("PENDING".equalsIgnoreCase(status) || "CHECKED_IN".equalsIgnoreCase(status));
+    }
+
+    public boolean isWaitingCancelApproval() {
+        return "WAITING_APPROVAL".equalsIgnoreCase(status);
+    }
+
+    public boolean isCancelled() {
+        return "CANCELLED".equalsIgnoreCase(status);
     }
 }
