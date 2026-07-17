@@ -33,7 +33,11 @@ public class BookingController {
 
     @GetMapping
     public ResponseEntity<List<BookingSummary>> getBookingsByDate(@RequestParam(name = "date", required = false) String date) {
-        LocalDate targetDate = (date == null || date.isBlank()) ? LocalDate.now() : LocalDate.parse(date);
+        if (date == null || date.isBlank()) {
+            return ResponseEntity.ok(bookingService.getAllBookings());
+        }
+
+        LocalDate targetDate = LocalDate.parse(date);
         return ResponseEntity.ok(bookingService.getBookingsByDate(targetDate));
     }
 
@@ -57,12 +61,48 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getRoomsByStatus(status));
     }
 
+    @GetMapping("/{bookingId}/changeable-rooms")
+    public ResponseEntity<?> getChangeableRooms(@PathVariable("bookingId") String bookingId) {
+        return ResponseEntity.ok(bookingService.getChangeableRooms(bookingId));
+    }
+
     @PatchMapping("/{bookingId}/status")
     public ResponseEntity<BookingSummary> updateBookingStatus(
             @PathVariable("bookingId") String bookingId,
             @RequestParam(name = "status") String status
     ) {
         return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, status));
+    }
+
+    @PatchMapping("/{bookingId}")
+    public ResponseEntity<BookingSummary> updateBookingDetails(
+            @PathVariable("bookingId") String bookingId,
+            @Valid @RequestBody CreateBookingRequest request
+    ) {
+        return ResponseEntity.ok(bookingService.updateBookingDetails(bookingId, request));
+    }
+
+    @PatchMapping("/{bookingId}/change-room")
+    public ResponseEntity<BookingSummary> changeBookingRoom(
+            @PathVariable("bookingId") String bookingId,
+            @RequestParam(name = "roomId") String roomId
+    ) {
+        return ResponseEntity.ok(bookingService.changeBookingRoom(bookingId, roomId));
+    }
+
+    @PatchMapping("/{bookingId}/cancel-request")
+    public ResponseEntity<BookingSummary> requestCancelBooking(@PathVariable("bookingId") String bookingId) {
+        return ResponseEntity.ok(bookingService.requestCancelBooking(bookingId));
+    }
+
+    @PatchMapping("/{bookingId}/approve-cancel")
+    public ResponseEntity<BookingSummary> approveCancelBooking(@PathVariable("bookingId") String bookingId) {
+        return ResponseEntity.ok(bookingService.approveCancelBooking(bookingId));
+    }
+
+    @PatchMapping("/{bookingId}/reject-cancel")
+    public ResponseEntity<BookingSummary> rejectCancelBooking(@PathVariable("bookingId") String bookingId) {
+        return ResponseEntity.ok(bookingService.rejectCancelBooking(bookingId));
     }
 
     @PostMapping

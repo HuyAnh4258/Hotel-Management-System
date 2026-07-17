@@ -200,8 +200,8 @@ class RoomTypeDetailPage extends StatelessWidget {
             FilledButton.icon(
               onPressed: availableRooms.isEmpty
                   ? null
-                  : () {
-                      Navigator.of(context).push(
+                  : () async {
+                      final booked = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(
                           builder: (_) => BookingFormPage(
                             roomType: roomType,
@@ -209,6 +209,10 @@ class RoomTypeDetailPage extends StatelessWidget {
                           ),
                         ),
                       );
+
+                      if (booked == true && context.mounted) {
+                        Navigator.of(context).pop(true);
+                      }
                     },
               icon: const Icon(Icons.event_available_rounded),
               label: const Text('Đặt loại phòng này'),
@@ -312,10 +316,32 @@ class BookingFormPage extends StatefulWidget {
     super.key,
     required this.roomType,
     required this.availableRooms,
+    this.prefillBooking,
+    this.lockDates = false,
+    this.initialCheckin,
+    this.initialCheckout,
+    this.initialGuestName,
+    this.initialPhone,
+    this.initialEmail,
+    this.initialSelectedRoomId,
+    this.changeBookingId,
+    this.onBookingChanged,
+    this.dialogMode = false,
   });
 
   final RoomTypeModel roomType;
   final List<RoomModel> availableRooms;
+  final BookingSummary? prefillBooking;
+  final bool lockDates;
+  final DateTime? initialCheckin;
+  final DateTime? initialCheckout;
+  final String? initialGuestName;
+  final String? initialPhone;
+  final String? initialEmail;
+  final String? initialSelectedRoomId;
+  final String? changeBookingId;
+  final ValueChanged<BookingSummary>? onBookingChanged;
+  final bool dialogMode;
 
   @override
   State<BookingFormPage> createState() => _BookingFormPageState();
@@ -340,7 +366,53 @@ class _BookingFormPageState extends State<BookingFormPage> {
   void initState() {
     super.initState();
     _availableRooms = List<RoomModel>.from(widget.availableRooms);
-    if (_availableRooms.isNotEmpty) {
+
+    if (widget.changeBookingId != null) {
+      _loadChangeableRooms();
+    }
+
+    final booking = widget.prefillBooking;
+    _fullNameController.text =
+        widget.initialGuestName ?? booking?.guestName ?? '';
+    _phoneController.text = widget.initialPhone ?? booking?.phone ?? '';
+    _emailController.text = widget.initialEmail ?? booking?.email ?? '';
+
+    final parsedCheckin =
+        widget.initialCheckin ??
+        DateTime.tryParse(booking?.expectedCheckin ?? '');
+    final parsedCheckout =
+        widget.initialCheckout ??
+        DateTime.tryParse(booking?.expectedCheckout ?? '');
+
+    if (parsedCheckin != null) {
+      _checkinDate = parsedCheckin;
+      _checkinController.text = _formatDateForDisplay(parsedCheckin);
+    }
+
+    if (parsedCheckout != null) {
+      _checkoutDate = parsedCheckout;
+      _checkoutController.text = _formatDateForDisplay(parsedCheckout);
+    }
+
+    if (widget.initialSelectedRoomId != null) {
+      _selectedRoom = _availableRooms.isNotEmpty
+          ? _availableRooms.firstWhere(
+              (room) => room.roomId == widget.initialSelectedRoomId,
+              orElse: () => _availableRooms.first,
+            )
+          : null;
+    } else if (widget.changeBookingId != null &&
+        widget.prefillBooking != null) {
+      final currentRoomId = widget.prefillBooking!.rooms.isNotEmpty
+          ? widget.prefillBooking!.rooms.first
+          : null;
+      if (currentRoomId != null) {
+        _selectedRoom = _availableRooms.firstWhere(
+          (room) => room.roomId == currentRoomId,
+          orElse: () => _availableRooms.first,
+        );
+      }
+    } else if (_availableRooms.isNotEmpty) {
       _selectedRoom = _availableRooms.first;
     }
   }
@@ -378,6 +450,54 @@ class _BookingFormPageState extends State<BookingFormPage> {
     final nights = _calculateNights();
     if (nights == null || nights <= 0) return null;
     return nights * _dailyRate();
+  }
+
+  Future<void> _loadChangeableRooms() async {
+    final bookingId = widget.changeBookingId;
+    if (bookingId == null) return;
+
+    setState(() {
+      _loadingRooms = true;
+    });
+
+    try {
+      final rooms = await BookingApi.getChangeableRooms(bookingId);
+      if (!mounted) return;
+
+      setState(() {
+        _availableRooms = rooms
+            .where((room) => room.roomTypeId == widget.roomType.roomTypeId)
+            .toList();
+
+        if (widget.prefillBooking != null && _availableRooms.isNotEmpty) {
+          final currentRoomId = widget.prefillBooking!.rooms.isNotEmpty
+              ? widget.prefillBooking!.rooms.first
+              : null;
+
+          if (currentRoomId != null) {
+            _selectedRoom = _availableRooms.firstWhere(
+              (room) => room.roomId == currentRoomId,
+              orElse: () => _availableRooms.first,
+            );
+          }
+        }
+
+        if (_selectedRoom == null && _availableRooms.isNotEmpty) {
+          _selectedRoom = _availableRooms.first;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không tải được danh sách phòng đổi: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingRooms = false;
+        });
+      }
+    }
   }
 
   Future<void> _reloadAvailableRooms() async {
@@ -424,6 +544,8 @@ class _BookingFormPageState extends State<BookingFormPage> {
   }
 
   Future<void> _pickDate({required bool isCheckin}) async {
+    if (widget.lockDates || widget.changeBookingId != null) return;
+
     final now = DateTime.now();
     final initialDate = isCheckin
         ? (_checkinDate ?? now)
@@ -464,8 +586,8 @@ class _BookingFormPageState extends State<BookingFormPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() ||
         _selectedRoom == null ||
-        _checkinDate == null ||
-        _checkoutDate == null) {
+        (_checkinDate == null && widget.initialCheckin == null) ||
+        (_checkoutDate == null && widget.initialCheckout == null)) {
       if (_selectedRoom == null && mounted) {
         ScaffoldMessenger.of(
           context,
@@ -479,29 +601,58 @@ class _BookingFormPageState extends State<BookingFormPage> {
     });
 
     try {
-      await BookingApi.createBooking(
-        CreateBookingPayload(
-          fullName: _fullNameController.text.trim(),
-          phone: _phoneController.text.trim(),
-          email: _emailController.text.trim(),
-          roomTypeId: widget.roomType.roomTypeId,
-          roomId: _selectedRoom!.roomId,
-          expectedCheckin: _formatDateForApi(_checkinDate!),
-          expectedCheckout: _formatDateForApi(_checkoutDate!),
+      BookingSummary? result;
+      if (widget.changeBookingId != null) {
+        result = await BookingApi.changeBookingRoom(
+          widget.changeBookingId!,
+          _selectedRoom!.roomId,
+        );
+      } else {
+        await BookingApi.createBooking(
+          CreateBookingPayload(
+            fullName: _fullNameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            email: _emailController.text.trim(),
+            roomTypeId: widget.roomType.roomTypeId,
+            roomId: _selectedRoom!.roomId,
+            expectedCheckin: _formatDateForApi(_checkinDate!),
+            expectedCheckout: _formatDateForApi(_checkoutDate!),
+          ),
+        );
+      }
+
+      if (!mounted) return;
+
+      if (result != null) {
+        widget.onBookingChanged?.call(result);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.changeBookingId != null
+                ? 'Đổi phòng thành công'
+                : 'Đặt phòng thành công',
+          ),
         ),
       );
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Đặt phòng thành công')));
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      if (widget.dialogMode) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Đặt phòng thất bại: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.changeBookingId != null
+                ? 'Đổi phòng thất bại: $e'
+                : 'Đặt phòng thất bại: $e',
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -547,14 +698,18 @@ class _BookingFormPageState extends State<BookingFormPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Đặt ${widget.roomType.name}',
+                    widget.changeBookingId != null
+                        ? 'Thay đổi đơn hàng'
+                        : 'Đặt ${widget.roomType.name}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Vui lòng điền thông tin, chọn ngày và tích chọn phòng để hoàn tất yêu cầu đặt phòng.',
+                    widget.changeBookingId != null
+                        ? 'Chọn 1 phòng còn trống cùng loại phòng. Ngày nhận và trả phòng được giữ nguyên.'
+                        : 'Vui lòng điền thông tin, chọn ngày và tích chọn phòng để hoàn tất yêu cầu đặt phòng.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey.shade700,
                     ),
@@ -599,12 +754,16 @@ class _BookingFormPageState extends State<BookingFormPage> {
                   TextFormField(
                     controller: _checkinController,
                     readOnly: true,
+                    enabled:
+                        !widget.lockDates && widget.changeBookingId == null,
                     onTap: () => _pickDate(isCheckin: true),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Ngày nhận phòng',
                       hintText: 'Chọn ngày nhận phòng',
-                      prefixIcon: Icon(Icons.calendar_month_rounded),
-                      suffixIcon: Icon(Icons.expand_more_rounded),
+                      prefixIcon: const Icon(Icons.calendar_month_rounded),
+                      suffixIcon: widget.changeBookingId != null
+                          ? const Icon(Icons.lock_rounded)
+                          : const Icon(Icons.expand_more_rounded),
                     ),
                     validator: (v) => v == null || v.trim().isEmpty
                         ? 'Chọn ngày nhận phòng'
@@ -614,12 +773,16 @@ class _BookingFormPageState extends State<BookingFormPage> {
                   TextFormField(
                     controller: _checkoutController,
                     readOnly: true,
+                    enabled:
+                        !widget.lockDates && widget.changeBookingId == null,
                     onTap: () => _pickDate(isCheckin: false),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Ngày trả phòng',
                       hintText: 'Chọn ngày trả phòng',
-                      prefixIcon: Icon(Icons.event_rounded),
-                      suffixIcon: Icon(Icons.expand_more_rounded),
+                      prefixIcon: const Icon(Icons.event_rounded),
+                      suffixIcon: widget.changeBookingId != null
+                          ? const Icon(Icons.lock_rounded)
+                          : const Icon(Icons.expand_more_rounded),
                     ),
                     validator: (v) => v == null || v.trim().isEmpty
                         ? 'Chọn ngày trả phòng'
@@ -635,6 +798,15 @@ class _BookingFormPageState extends State<BookingFormPage> {
                       });
                     },
                     loading: _loadingRooms,
+                    lockedRoomId: widget.changeBookingId != null
+                        ? null
+                        : widget.initialSelectedRoomId,
+                    headerTitle: widget.changeBookingId != null
+                        ? 'Chọn phòng mới'
+                        : null,
+                    headerSubtitle: widget.changeBookingId != null
+                        ? 'Chỉ chọn 1 phòng còn trống cùng loại phòng.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   _PaymentSummaryCard(
@@ -648,7 +820,11 @@ class _BookingFormPageState extends State<BookingFormPage> {
                     child: FilledButton(
                       onPressed: _submitting ? null : _submit,
                       child: Text(
-                        _submitting ? 'Đang gửi...' : 'Xác nhận đặt phòng',
+                        _submitting
+                            ? 'Đang gửi...'
+                            : widget.changeBookingId != null
+                            ? 'Xác nhận'
+                            : 'Xác nhận đặt phòng',
                       ),
                     ),
                   ),
@@ -727,12 +903,18 @@ class _RoomSelectionList extends StatelessWidget {
     required this.selectedRoom,
     required this.onSelected,
     required this.loading,
+    this.lockedRoomId,
+    this.headerTitle,
+    this.headerSubtitle,
   });
 
   final List<RoomModel> rooms;
   final RoomModel? selectedRoom;
   final ValueChanged<RoomModel> onSelected;
   final bool loading;
+  final String? lockedRoomId;
+  final String? headerTitle;
+  final String? headerSubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -749,14 +931,15 @@ class _RoomSelectionList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Chọn phòng',
+            headerTitle ?? 'Chọn phòng',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
-            'Tích chọn một phòng còn trống trong danh sách bên dưới.',
+            headerSubtitle ??
+                'Tích chọn một phòng còn trống trong danh sách bên dưới.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
@@ -777,7 +960,9 @@ class _RoomSelectionList extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
-                  onTap: () => onSelected(room),
+                  onTap: lockedRoomId != null && lockedRoomId != room.roomId
+                      ? null
+                      : () => onSelected(room),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     padding: const EdgeInsets.all(14),
@@ -828,7 +1013,7 @@ class _RoomSelectionList extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'Tầng ${room.floor} • ${room.status}',
+                                'Tầng ${room.floor} • ${room.status.toUpperCase()}',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: Colors.grey.shade700),
                               ),
