@@ -1,0 +1,130 @@
+package com.hotel.hms.modules.catalogue_management.controller;
+
+import com.hotel.hms.modules.catalogue_management.dto.*;
+import com.hotel.hms.modules.catalogue_management.entity.AdjustmentType;
+import com.hotel.hms.modules.catalogue_management.service.IInventoryService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/inventory")
+@RequiredArgsConstructor
+public class InventoryController {
+
+    private final IInventoryService inventoryService;
+
+    // ── ITEM (MANAGER only for mutations, OWNER read-only) ─────
+
+    @GetMapping("/items")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<InventoryCatalogueResponseDTO>> getAllItems() {
+        return ResponseEntity.ok(inventoryService.getAllItems());
+    }
+
+    @GetMapping("/items/{id}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<InventoryCatalogueResponseDTO> getItemById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(inventoryService.getItemById(id));
+    }
+
+    @PostMapping("/items")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<InventoryCatalogueResponseDTO> createItem(
+            @Valid @RequestBody InventoryCatalogueRequestDTO request,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(inventoryService.createInventoryItem(request, user.getUsername()));
+    }
+
+    @PutMapping("/items/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<InventoryCatalogueResponseDTO> updateItem(
+            @PathVariable("id") String id,
+            @Valid @RequestBody InventoryCatalogueRequestDTO request) {
+        return ResponseEntity.ok(inventoryService.updateItemDetails(id, request));
+    }
+
+    @PatchMapping("/items/{id}/deactivate")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Void> deactivateItem(@PathVariable("id") String id) {
+        inventoryService.deactivateItem(id);
+
+    @PatchMapping("/items/{id}/unit-price")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<InventoryCatalogueResponseDTO> updateItemPrice(@PathVariable("id") String id, @RequestBody Map<String, BigDecimal> body) {
+        return ResponseEntity.ok(inventoryService.updateItemPrice(id, body.get("unitPrice")));
+    }
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── ADJUSTMENT (RBAC enforced per type) ─────────────────────
+
+    @PostMapping("/adjustments")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'SERVICE_STAFF', 'HOUSEKEEPER')")
+    public ResponseEntity<InventoryCatalogueResponseDTO> processAdjustment(
+            @Valid @RequestBody InventoryAdjustmentRequestDTO request,
+            @AuthenticationPrincipal UserDetails user) {
+
+        AdjustmentType type = request.getType();
+        String role = user.getAuthorities().iterator().next().getAuthority();
+
+        switch (type) {
+            case RESTOCK, RECONCILE, LOSS -> {
+                if (!role.contains("MANAGER")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+            case CONSUME -> {
+                if (!role.contains("MANAGER") && !role.contains("SERVICE_STAFF")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+            case DAMAGE -> {
+                if (!role.contains("MANAGER") && !role.contains("SERVICE_STAFF")
+                        && !role.contains("HOUSEKEEPER")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+            case AUTO_SELL -> {
+                // System-only — no human role allowed
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(inventoryService.processInventoryAdjustment(request, user.getUsername()));
+    }
+
+    // ── HISTORY & REPORTS ───────────────────────────────────────
+
+    @GetMapping("/items/{id}/history")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<?>> getItemAdjustmentHistory(@PathVariable("id") String id) {
+        return ResponseEntity.ok(inventoryService.getItemAdjustmentHistory(id));
+    }
+
+    @GetMapping("/low-stock")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<InventoryCatalogueResponseDTO>> getLowStockItems() {
+        return ResponseEntity.ok(inventoryService.getLowStockItems());
+    }
+
+    @GetMapping("/expenses/report")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<?>> getExpenseReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
+        return ResponseEntity.ok(inventoryService.getExpenseReport(fromDate, toDate));
+    }
+}

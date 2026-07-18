@@ -2,15 +2,19 @@
 -- HOTEL MANAGEMENT SYSTEM (HMS) - Database Schema
 -- Target: MySQL 8.0+
 -- Encoding: utf8mb4 / Collation: utf8mb4_unicode_ci
--- Updated: 2026-07-14 (DATETIME, ID format, status enums)
+-- Updated: 2026-07-16 (Technical Spec v2: Inventory, Expense, BOM)
 --
+--
+-- Chạy lại liên tiếp: DROP DATABASE -> CREATE -> TABLES -> SEED
 -- ID FORMAT:
 --   Static tables:     XXX-NNNNNNNN           (VARCHAR 12)
 --   Transactional:     XXX-YYMMDDHHMMSS-HHHH  (VARCHAR 20)
 --   Exception:         Room.RoomId = physical room number (VARCHAR 5)
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS HotelDB_Schema
+DROP DATABASE IF EXISTS HotelDB_Schema;
+
+CREATE DATABASE HotelDB_Schema
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
@@ -46,7 +50,7 @@ CREATE INDEX idx_user_username ON `User` (Username);
 CREATE INDEX idx_user_email    ON `User` (Email);
 
 -- ============================================================
--- 3. UserRole (Junction – no own ID)
+-- 3. UserRole (Junction)
 -- ============================================================
 CREATE TABLE UserRole (
     UserId VARCHAR(12) NOT NULL,
@@ -133,7 +137,7 @@ CREATE TABLE RoomType (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- 8. Room (Static – RoomId is physical room number)
+-- 8. Room (Static - RoomId là số phòng vật lý)
 -- ============================================================
 CREATE TABLE Room (
     RoomId      VARCHAR(5)   NOT NULL COMMENT 'Physical room number, e.g. 101',
@@ -235,7 +239,6 @@ CREATE TABLE RoomBooking (
     ActualCheckout  DATETIME      NULL,
     Status          VARCHAR(20)   NOT NULL DEFAULT 'RESERVED'
                                   COMMENT 'RESERVED|CHECKED_IN|CHECKED_OUT|TRANSFERRED|CANCELLED',
-    -- Self-reference: new RoomBookingId when guest transfers to another room
     TransferredTo   VARCHAR(20)   NULL,
     CONSTRAINT pk_room_booking PRIMARY KEY (RoomBookingId),
     CONSTRAINT fk_rb_room    FOREIGN KEY (RoomId)
@@ -307,14 +310,16 @@ CREATE TABLE Feedback (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- 16. InventoryItem (Static)
+-- 16. InventoryItem (Static - Back-stage: chỉ chứa giá vốn)
+--     StockQuantity KHÔNG cập nhật trực tiếp, chỉ qua Adjustment
+--     Không chứa UnitPrice (giá bán nằm ở Service)
 -- ============================================================
 CREATE TABLE InventoryItem (
     ItemId            VARCHAR(12)   NOT NULL COMMENT 'INV-00000001',
     ItemName          VARCHAR(100)  NOT NULL,
     StockQuantity     INT           NOT NULL DEFAULT 0,
-    UnitCost          DECIMAL(18,2) NOT NULL,
-    UnitPrice         DECIMAL(18,2) NOT NULL,
+    UnitCost          DECIMAL(18,2) NOT NULL COMMENT 'Giá vốn nhập kho',
+    UnitPrice   DECIMAL(18,2) NULL     COMMENT 'Giá bán (Owner đặt)',
     LowStockThreshold INT           NOT NULL DEFAULT 5,
     IsActive          BIT           NOT NULL DEFAULT 1,
     CreatedAt         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -325,13 +330,17 @@ CREATE TABLE InventoryItem (
 
 -- ============================================================
 -- 17. InventoryAdjustment (Transactional)
+--     RESTOCK: nhập kho (tự sinh Expense)
+--     CONSUME: xuất kho nội bộ / bán hàng tự động trừ
+--     DAMAGE:  xuất kho do hư hỏng / hao hụt
+--     RECONCILE: kiểm kê bù trừ chênh lệch (Manager)
 -- ============================================================
 CREATE TABLE InventoryAdjustment (
-    AdjustmentId VARCHAR(20)  NOT NULL COMMENT 'ADJ-YYMMDDHHMMSS-HHHH',
+    AdjustmentId VARCHAR(22)  NOT NULL COMMENT 'ADJ-YYMMDDHHMMSS-HHHH',
     ItemId       VARCHAR(12)  NOT NULL,
     EmployeeId   VARCHAR(12)  NOT NULL,
     Quantity     INT          NOT NULL,
-    Type         VARCHAR(20)  NOT NULL COMMENT 'IMPORT|EXPORT',
+    Type         VARCHAR(20)  NOT NULL COMMENT 'RESTOCK|CONSUME|DAMAGE|RECONCILE|LOSS|AUTO_SELL',
     Description  VARCHAR(255) NULL,
     CreatedAt    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_inventory_adj PRIMARY KEY (AdjustmentId),
@@ -346,27 +355,33 @@ CREATE INDEX idx_adj_employee ON InventoryAdjustment (EmployeeId);
 
 -- ============================================================
 -- 18. Expense (Transactional)
+--     AdjustmentId NULLABLE: chi phí OPERATIONAL không gắn với Adjustment
+--     RESTOCK: tự động sinh khi nhập kho
+--     OPERATIONAL: chi phí vận hành (điện, nước,...) do Manager tạo thủ công
 -- ============================================================
 CREATE TABLE Expense (
-    ExpenseId    VARCHAR(20)   NOT NULL COMMENT 'EXP-YYMMDDHHMMSS-HHHH',
-    AdjustmentId VARCHAR(20)   NOT NULL,
+    ExpenseId    VARCHAR(22)   NOT NULL COMMENT 'EXP-YYMMDDHHMMSS-HHHH',
+    AdjustmentId VARCHAR(20)   NULL     COMMENT 'NULL nếu là chi phí vận hành',
+    ExpenseType  VARCHAR(20)   NOT NULL DEFAULT 'RESTOCK' COMMENT 'RESTOCK|OPERATIONAL',
     Amount       DECIMAL(18,2) NOT NULL,
     Description  VARCHAR(255)  NOT NULL,
     CreatedAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_expense PRIMARY KEY (ExpenseId),
     CONSTRAINT fk_expense_adj FOREIGN KEY (AdjustmentId)
         REFERENCES InventoryAdjustment (AdjustmentId)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE INDEX idx_expense_type ON Expense (ExpenseType);
+
 -- ============================================================
--- 19. Service (Static)
+-- 19. Service (Static - Front-stage: chứa giá bán)
 -- ============================================================
 CREATE TABLE Service (
     ServiceId   VARCHAR(12)   NOT NULL COMMENT 'SRV-00000001',
     ServiceName VARCHAR(100)  NOT NULL,
     Description VARCHAR(500)  NULL,
-    Price       DECIMAL(18,2) NOT NULL,
+    UnitPrice   DECIMAL(18,2) NOT NULL COMMENT 'Giá bán cho khách',
     IsActive    BIT           NOT NULL DEFAULT 1,
     CreatedAt   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt   DATETIME      NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -375,7 +390,24 @@ CREATE TABLE Service (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- 20. Order (Transactional – backtick: ORDER is SQL keyword)
+-- 20. Service_Inventory_Recipe (BOM - Bill of Materials)
+--     Định mức: 1 Service cần bao nhiêu InventoryItem
+--     Dùng để tự động trừ kho khi Order COMPLETED
+-- ============================================================
+CREATE TABLE Service_Inventory_Recipe (
+    ServiceId        VARCHAR(12) NOT NULL,
+    InventoryItemId  VARCHAR(12) NOT NULL,
+    QuantityRequired INT         NOT NULL DEFAULT 1 COMMENT 'Số lượng vật tư cần cho 1 Service',
+    CONSTRAINT pk_service_recipe PRIMARY KEY (ServiceId, InventoryItemId),
+    CONSTRAINT fk_recipe_service FOREIGN KEY (ServiceId)
+        REFERENCES Service (ServiceId) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_recipe_item    FOREIGN KEY (InventoryItemId)
+        REFERENCES InventoryItem (ItemId) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- 21. Order (Transactional - backtick vì ORDER là SQL keyword)
+--     Khi Status -> COMPLETED: tự động đọc BOM và trừ kho
 -- ============================================================
 CREATE TABLE `Order` (
     OrderId     VARCHAR(20)   NOT NULL COMMENT 'ORD-YYMMDDHHMMSS-HHHH',
@@ -396,7 +428,7 @@ CREATE INDEX idx_order_booking  ON `Order` (BookingId);
 CREATE INDEX idx_order_employee ON `Order` (EmployeeId);
 
 -- ============================================================
--- 21. ServiceOrder_InventoryItem (Order N-N InventoryItem)
+-- 22. ServiceOrder_InventoryItem (Order N-N InventoryItem)
 -- ============================================================
 CREATE TABLE ServiceOrder_InventoryItem (
     OrderId      VARCHAR(20)   NOT NULL,
@@ -411,7 +443,7 @@ CREATE TABLE ServiceOrder_InventoryItem (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- 22. ServiceOrder_Service (Order N-N Service)
+-- 23. ServiceOrder_Service (Order N-N Service)
 -- ============================================================
 CREATE TABLE ServiceOrder_Service (
     ServiceId    VARCHAR(12)   NOT NULL,
@@ -442,3 +474,50 @@ INSERT INTO RoomType (RoomTypeId, TypeName, Description, BasePrice, MaxOccupancy
 ('RTP-00000002', 'Deluxe',   'Phòng cao cấp có view',      800000,  2),
 ('RTP-00000003', 'Superior', 'Phòng Superior rộng rãi',    650000,  3),
 ('RTP-00000004', 'Suite',    'Phòng Suite sang trọng',    1500000, 4);
+
+-- Password for all users: Hotel@123 (BCrypt)
+INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt) VALUES
+('USR-00000001', 'owner',        'owner@fptgolden.vn',        '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000002', 'manager',      'manager@fptgolden.vn',      '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000003', 'receptionist', 'receptionist@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000004', 'servicestaff', 'servicestaff@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000005', 'housekeeper',  'housekeeper@fptgolden.vn',  '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000006', 'guest',        'guest@fptgolden.vn',        '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW());
+
+INSERT INTO UserRole (UserId, RoleId) VALUES
+('USR-00000001', 'ROL-00000001'),
+('USR-00000002', 'ROL-00000002'),
+('USR-00000003', 'ROL-00000003'),
+('USR-00000004', 'ROL-00000004'),
+('USR-00000005', 'ROL-00000005'),
+('USR-00000006', 'ROL-00000006');
+
+INSERT INTO EmployeeProfile (UserId, EmployeeId, FullName, Phone, Salary, HireDate) VALUES
+('USR-00000001', 'EMP-00000001', 'Nguyễn Văn Chủ',      '0901000001', 35000000, '2024-01-15'),
+('USR-00000002', 'EMP-00000002', 'Trần Thị Quản Lý',    '0901000002', 25000000, '2024-01-15'),
+('USR-00000003', 'EMP-00000003', 'Lê Văn Lễ Tân',       '0901000003', 12000000, '2024-01-15'),
+('USR-00000004', 'EMP-00000004', 'Phạm Thị Phục Vụ',    '0901000004', 10000000, '2024-01-15'),
+('USR-00000005', 'EMP-00000005', 'Hoàng Văn Dọn Phòng', '0901000005',  9000000, '2024-01-15');
+
+INSERT INTO GuestProfile (GuestId, UserId, FullName, Phone, IdentityNumber) VALUES
+('GST-00000001', 'USR-00000006', 'Nguyễn Văn Khách', '0901000006', '001200000001');
+
+INSERT INTO InventoryItem (ItemId, ItemName, StockQuantity, UnitCost, LowStockThreshold, IsActive, CreatedAt, UpdatedAt) VALUES
+('INV-00000001', 'Xà phòng tắm',        150, 5000,  20, 1, NOW(), NOW()),
+('INV-00000002', 'Dầu gội đầu',         120, 8000,  15, 1, NOW(), NOW()),
+('INV-00000003', 'Nước suối 500ml',     200, 3000,  30, 1, NOW(), NOW()),
+('INV-00000004', 'Coca Cola lon',       180, 7000,  25, 1, NOW(), NOW()),
+('INV-00000005', 'Khăn tắm trắng',       50, 45000, 10, 1, NOW(), NOW()),
+('INV-00000006', 'Drap giường King',     30, 120000, 5,  1, NOW(), NOW()),
+('INV-00000007', 'Bàn chải đánh răng',  300, 2000,  40, 1, NOW(), NOW()),
+('INV-00000008', 'Kem đánh răng mini',  250, 3000,  35, 1, NOW(), NOW()),
+('INV-00000009', 'Bia Heineken lon',    100, 12000, 20, 1, NOW(), NOW()),
+('INV-00000010', 'Nước giặt công nghiệp', 8, 250000, 3,  1, NOW(), NOW());
+
+INSERT INTO Service (ServiceId, ServiceName, Description, UnitPrice, IsActive, CreatedAt, UpdatedAt) VALUES
+('SRV-00000001', 'Nước suối',          'Nước suối 500ml',              15000, 1, NOW(), NOW()),
+('SRV-00000002', 'Coca Cola',          'Coca Cola lon 330ml',          20000, 1, NOW(), NOW()),
+('SRV-00000003', 'Bia Heineken',       'Bia Heineken lon 330ml',       30000, 1, NOW(), NOW()),
+('SRV-00000004', 'Xà phòng tắm',       'Xà phòng tắm khách sạn',      25000, 1, NOW(), NOW()),
+('SRV-00000005', 'Giặt ủi',            'Dịch vụ giặt ủi quần áo',     50000, 1, NOW(), NOW()),
+('SRV-00000006', 'Ăn sáng buffet',     'Buffet sáng tại nhà hàng',   150000, 1, NOW(), NOW());
