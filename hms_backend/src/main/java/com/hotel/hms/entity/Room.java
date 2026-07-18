@@ -6,9 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "Room")
+@Getter
+@Setter
 public class Room {
     @Id
     @Column(name = "RoomId", length = 5)
@@ -32,32 +36,4 @@ public class Room {
 
     @Column(name = "IsActive", nullable = false)
     private Boolean isActive = true;
-
-    public String getRoomId() {
-        return roomId;
-    }
-
-    public RoomType getRoomType() {
-        return roomType;
-    }
-
-    public String getRoomName() {
-        return roomName;
-    }
-
-    public Integer getFloorNumber() {
-        return floorNumber;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public Boolean getIsActive() {
-        return isActive;
-    }
 }

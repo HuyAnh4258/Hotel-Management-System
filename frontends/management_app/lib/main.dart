@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+import 'modules/housekeeper/view/room_list_page.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi_VN', null);
   runApp(const HmsApp());
 }
 
@@ -17,10 +22,8 @@ class HmsApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // TODO: Replace with LoginPage when auth module is ready
-      home: const Scaffold(
-        body: Center(child: Text('HMS - Hotel Management System')),
-      ),
+      // Tạm thời hiển thị trang Buồng phòng
+      home: const RoomListPage(),
     );
   }
 }
