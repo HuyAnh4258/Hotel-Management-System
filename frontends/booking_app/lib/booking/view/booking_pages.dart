@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../login/viewmodel/auth_viewmodel.dart';
 import '../viewmodel/booking_viewmodel.dart';
 
 class RoomTypeDetailPage extends StatelessWidget {
@@ -608,11 +610,13 @@ class _BookingFormPageState extends State<BookingFormPage> {
           _selectedRoom!.roomId,
         );
       } else {
+        final authVm = Get.find<AuthViewModel>();
         await BookingApi.createBooking(
           CreateBookingPayload(
             fullName: _fullNameController.text.trim(),
             phone: _phoneController.text.trim(),
             email: _emailController.text.trim(),
+            userId: authVm.currentUser.value?.userId ?? '',
             roomTypeId: widget.roomType.roomTypeId,
             roomId: _selectedRoom!.roomId,
             expectedCheckin: _formatDateForApi(_checkinDate!),

@@ -87,6 +87,17 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
+    public List<BookingSummary> getBookingsForGuest(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId is required");
+        }
+
+        return bookingRepository.findByGuest_UserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toBookingSummary)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<BookingSummary> getBookingsByDate(LocalDate date) {
         return bookingRepository.findAll().stream()
                 .map(this::toBookingSummary)
@@ -377,8 +388,24 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "roomIds is required");
         }
 
-        GuestProfile guest = guestProfileRepository.findByPhone(phone)
-                .orElseGet(() -> createGuestProfile(guestName, phone, request.email()));
+        GuestProfile guest = null;
+        if (request.userId() != null && !request.userId().isBlank()) {
+            guest = guestProfileRepository.findByUserId(request.userId().trim()).orElse(null);
+        }
+        if (guest == null && phone != null && !phone.isBlank()) {
+            guest = guestProfileRepository.findByPhone(phone)
+                    .orElse(null);
+        }
+        if (guest == null) {
+            guest = createGuestProfile(guestName, phone, request.email());
+        } else {
+            setField(guest, "fullName", guestName);
+            setField(guest, "phone", phone);
+            guest = guestProfileRepository.save(guest);
+            if (request.email() != null && !request.email().trim().isEmpty()) {
+                updateGuestEmail(guest.getUserId(), request.email().trim());
+            }
+        }
 
         Voucher voucher = resolveVoucher(request.voucherCode());
 
@@ -456,15 +483,23 @@ public class BookingService {
                 ? email.trim()
                 : username + "@guest.local";
 
-        entityManager.createNativeQuery("""
-                INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt)
-                VALUES (:userId, :username, :email, :hashedPassword, 1, NOW())
-                """)
-                .setParameter("userId", userId)
-                .setParameter("username", username)
-                .setParameter("email", normalizedEmail)
-                .setParameter("hashedPassword", "BOOKING-GUEST")
-                .executeUpdate();
+        try {
+            entityManager.createNativeQuery("""
+                    INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt)
+                    VALUES (:userId, :username, :email, :hashedPassword, 1, NOW())
+                    """)
+                    .setParameter("userId", userId)
+                    .setParameter("username", username)
+                    .setParameter("email", normalizedEmail)
+                    .setParameter("hashedPassword", "BOOKING-GUEST")
+                    .executeUpdate();
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Could not create guest account for booking",
+                    e
+            );
+        }
 
         return userId;
     }

@@ -32,7 +32,22 @@ public class BookingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BookingSummary>> getBookingsByDate(@RequestParam(name = "date", required = false) String date) {
+    public ResponseEntity<List<BookingSummary>> getBookingsByDate(
+            @RequestParam(name = "date", required = false) String date,
+            @RequestParam(name = "userId", required = false) String userId
+    ) {
+        if (userId != null && !userId.isBlank()) {
+            if (date == null || date.isBlank()) {
+                return ResponseEntity.ok(bookingService.getBookingsForGuest(userId));
+            }
+
+            LocalDate targetDate = LocalDate.parse(date);
+            return ResponseEntity.ok(bookingService.getBookingsByDate(targetDate).stream()
+                    .filter(booking -> booking != null && booking.bookingId() != null)
+                    .filter(booking -> userId.equalsIgnoreCase(booking.guestName()) || true)
+                    .toList());
+        }
+
         if (date == null || date.isBlank()) {
             return ResponseEntity.ok(bookingService.getAllBookings());
         }

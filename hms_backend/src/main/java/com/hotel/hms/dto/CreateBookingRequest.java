@@ -7,6 +7,7 @@ public record CreateBookingRequest(
         String guestName,
         String email,
         String phone,
+        String userId,
         LocalDate expectedCheckin,
         LocalDate expectedCheckout,
         List<String> roomIds,
