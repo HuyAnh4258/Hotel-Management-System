@@ -22,6 +22,6 @@ public class RegisterRequest {
     private String fullName;
 
     @NotBlank @Size(min = 10, max = 10)
-    @Pattern(regexp = "^0\\d{9}$", message = "Số điện thoại phải 10 số, bắt đầu bằng 0")
+    @Pattern(regexp = "^0\\d{9}$", message = "Sá»‘ Ä‘iá»‡n thoáº¡i pháº£i 10 sá»‘, báº¯t Ä‘áº§u báº±ng 0")
     private String phone;
 }

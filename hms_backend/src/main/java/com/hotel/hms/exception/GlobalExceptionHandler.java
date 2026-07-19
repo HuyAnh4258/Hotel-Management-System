@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
         for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
             errors.put(fe.getField(), fe.getDefaultMessage());
         }
-        return buildResponse(HttpStatus.BAD_REQUEST, "Lỗi dữ liệu: " + errors);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Lá»—i dá»¯ liá»‡u: " + errors);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

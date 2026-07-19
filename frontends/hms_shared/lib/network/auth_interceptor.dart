@@ -8,6 +8,10 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (options.path.contains('/api/auth/')) {
+      handler.next(options);
+      return;
+    }
     _tokenStorage.getAccessToken().then((token) {
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';

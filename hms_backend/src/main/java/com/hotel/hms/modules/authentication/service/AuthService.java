@@ -26,22 +26,24 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final IdGenerator idGenerator;
+    private final OtpCodeRepository otpCodeRepo;
+    private final EmailService emailService;
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
         String input = request.getUsername();
         User user = input.contains("@")
                 ? userRepo.findByEmail(input)
-                    .orElseThrow(() -> new RuntimeException("Sai tên đăng nhập hoặc mật khẩu"))
+                    .orElseThrow(() -> new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u"))
                 : userRepo.findByUsername(input)
-                    .orElseThrow(() -> new RuntimeException("Sai tên đăng nhập hoặc mật khẩu"));
+                    .orElseThrow(() -> new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u"));
 
         if (!user.getIsActive()) {
-            throw new RuntimeException("Tài khoản đã bị vô hiệu hoá");
+            throw new RuntimeException("TÃ i khoáº£n Ä‘Ã£ bá»‹ vÃ´ hiá»‡u hoÃ¡");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getHashedPassword())) {
-            throw new RuntimeException("Sai tên đăng nhập hoặc mật khẩu");
+            throw new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u");
         }
 
         List<UserRole> userRoles = userRoleRepo.findByUser_UserId(user.getUserId());
@@ -76,17 +78,17 @@ public class AuthService {
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         if (userRepo.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+            throw new RuntimeException("TÃªn Ä‘Äƒng nháº­p Ä‘Ã£ tá»“n táº¡i");
         }
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã tồn tại");
+            throw new RuntimeException("Email Ä‘Ã£ tá»“n táº¡i");
         }
         if (guestRepo.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("Số điện thoại đã tồn tại");
+            throw new RuntimeException("Sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ tá»“n táº¡i");
         }
 
         Role guestRole = roleRepo.findByRoleName("GUEST")
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy role GUEST"));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y role GUEST"));
 
         String userId = idGenerator.generateStaticId("USR", userRepo);
 
@@ -126,10 +128,10 @@ public class AuthService {
     @Transactional
     public void createEmployee(EmployeeCreateRequest request) {
         if (userRepo.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+            throw new RuntimeException("TÃªn Ä‘Äƒng nháº­p Ä‘Ã£ tá»“n táº¡i");
         }
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã tồn tại");
+            throw new RuntimeException("Email Ä‘Ã£ tá»“n táº¡i");
         }
 
         Role role = roleRepo.findByRoleName(request.getRole())
@@ -179,6 +181,61 @@ public class AuthService {
         return employeeRepo.findById(userId)
                 .map(EmployeeProfile::getFullName)
                 .orElse(null);
+    }
+
+    @Transactional
+    public void requestForgotPasswordOtp(ForgotPasswordRequest request) {
+        String email = request.getEmail().trim();
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n liÃªn káº¿t vá»›i email nÃ y"));
+
+        // Generate 6-digit numeric OTP
+        String otp = String.valueOf((int) ((Math.random() * 900000) + 100000));
+        java.time.LocalDateTime expireTime = java.time.LocalDateTime.now().plusMinutes(5);
+
+        OtpCode otpCode = otpCodeRepo.findByEmail(email).orElse(null);
+        if (otpCode == null) {
+            otpCode = OtpCode.builder().email(email).build();
+        }
+        otpCode.setOtp(otp);
+        otpCode.setExpireTime(expireTime);
+        otpCodeRepo.save(otpCode);
+
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    public void verifyForgotPasswordOtp(ForgotPasswordVerifyRequest request) {
+        String email = request.getEmail().trim();
+        String otp = request.getOtp().trim();
+
+        OtpCode otpCode = otpCodeRepo.findByEmailAndOtp(email, otp)
+                .orElseThrow(() -> new RuntimeException("MÃ£ OTP khÃ´ng Ä‘Ãºng hoáº·c khÃ´ng tá»“n táº¡i"));
+
+        if (otpCode.getExpireTime().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("MÃ£ OTP Ä‘Ã£ háº¿t hiá»‡u lá»±c");
+        }
+    }
+
+    @Transactional
+    public void resetPassword(ForgotPasswordResetRequest request) {
+        String email = request.getEmail().trim();
+        String otp = request.getOtp().trim();
+
+        OtpCode otpCode = otpCodeRepo.findByEmailAndOtp(email, otp)
+                .orElseThrow(() -> new RuntimeException("MÃ£ OTP khÃ´ng Ä‘Ãºng hoáº·c khÃ´ng tá»“n táº¡i"));
+
+        if (otpCode.getExpireTime().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("MÃ£ OTP Ä‘Ã£ háº¿t hiá»‡u lá»±c");
+        }
+
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n liÃªn káº¿t vá»›i email nÃ y"));
+
+        user.setHashedPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepo.save(user);
+
+        // Delete OTP after successful use
+        otpCodeRepo.delete(otpCode);
     }
 
     private String generateRandomPassword() {

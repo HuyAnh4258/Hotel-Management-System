@@ -197,14 +197,14 @@ class ManagerDashboardScreen extends StatelessWidget {
 
   Widget _buildSummaryGrid(ManagerDashboardViewModel vm, bool isWide, double width) {
     int cols = 2;
-    double ratio = 2.1;
+    double ratio = 1.35; // Lower ratio means taller card to prevent text overflow
 
     if (width > 900) {
       cols = 5;
-      ratio = 2.4;
+      ratio = 1.6;
     } else if (width > 600) {
       cols = 3;
-      ratio = 1.95;
+      ratio = 1.45;
     }
 
     return SliverGrid(
@@ -222,7 +222,10 @@ class ManagerDashboardScreen extends StatelessWidget {
     final inventoryVm = Get.find<InventoryViewModel>();
     final serviceVm = Get.find<ServiceViewModel>();
 
-    final activeServicesCount = serviceVm.items.where((s) => s.isActive).length;
+    final activeServices = serviceVm.items.where((s) => s.isActive).toList();
+    final singleCount = activeServices.where((s) => !s.isComposite).length;
+    final compositeCount = activeServices.where((s) => s.isComposite).length;
+    final pricedCount = activeServices.where((s) => s.isPriced).length;
 
     return [
       // Pillar 1: Inventory & Expense
@@ -240,7 +243,12 @@ class ManagerDashboardScreen extends StatelessWidget {
       // Pillar 2: Services
       SummaryCardWidget(
         title: 'Dịch vụ hiện có',
-        metrics: ['Hoạt động: $activeServicesCount'],
+        metrics: [
+          'Hoạt động: ${activeServices.length}',
+          'Đơn lẻ: $singleCount',
+          'Phức hợp: $compositeCount',
+          'Đã đặt giá: $pricedCount',
+        ],
         icon: Icons.room_service_outlined,
         themeColor: AppColors.info,
       ),
