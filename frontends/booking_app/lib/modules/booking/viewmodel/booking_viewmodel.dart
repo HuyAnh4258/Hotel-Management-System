@@ -4,10 +4,19 @@ class BookingApi {
   BookingApi._();
 
   static const String baseUrl = 'http://10.0.2.2:8080/api/booking';
+  static const String serviceOrderBaseUrl =
+      'http://10.0.2.2:8080/api/service-orders';
 
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: baseUrl,
+      headers: {'Content-Type': 'application/json'},
+    ),
+  );
+
+  static final Dio _serviceOrderDio = Dio(
+    BaseOptions(
+      baseUrl: serviceOrderBaseUrl,
       headers: {'Content-Type': 'application/json'},
     ),
   );
@@ -151,6 +160,61 @@ class BookingApi {
   static Future<void> createBooking(CreateBookingPayload payload) async {
     await _dio.post('', data: payload.toJson());
   }
+
+  static Future<List<FeedbackModel>> getFeedbacks() async {
+    final response = await _dio.get('/feedbacks');
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => FeedbackModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  static Future<FeedbackModel> submitFeedback(
+    SubmitFeedbackPayload payload,
+  ) async {
+    final response = await _dio.post('/feedbacks', data: payload.toJson());
+    return FeedbackModel.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<List<HotelServiceModel>> getServices() async {
+    final response = await _serviceOrderDio.get('/services');
+    final data = response.data as List<dynamic>;
+    return data
+        .map(
+          (e) =>
+              HotelServiceModel.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+  }
+
+  static Future<List<ServiceOrderModel>> getServiceOrders() async {
+    final response = await _serviceOrderDio.get('');
+    final data = response.data as List<dynamic>;
+    return data
+        .map(
+          (e) =>
+              ServiceOrderModel.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+  }
+
+  static Future<ServiceOrderModel> createServiceOrder(
+    CreateServiceOrderPayload payload,
+  ) async {
+    final response = await _serviceOrderDio.post('', data: payload.toJson());
+    return ServiceOrderModel.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  static Future<ServiceOrderModel> cancelServiceOrder(String orderId) async {
+    final response = await _serviceOrderDio.patch('/$orderId/cancel');
+    return ServiceOrderModel.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
 }
 
 class CreateBookingPayload {
@@ -285,6 +349,183 @@ class BookingSummary {
   bool get isCancelled => status.toUpperCase() == 'CANCELLED';
 }
 
+class FeedbackModel {
+  FeedbackModel({
+    required this.feedbackId,
+    required this.bookingId,
+    required this.guestName,
+    required this.phone,
+    required this.bookingStatus,
+    required this.rooms,
+    required this.rating,
+    required this.comment,
+    required this.createdAt,
+  });
+
+  final String feedbackId;
+  final String bookingId;
+  final String guestName;
+  final String phone;
+  final String bookingStatus;
+  final List<String> rooms;
+  final int rating;
+  final String comment;
+  final String createdAt;
+
+  factory FeedbackModel.fromJson(Map<String, dynamic> json) {
+    return FeedbackModel(
+      feedbackId: json['feedbackId']?.toString() ?? '',
+      bookingId: json['bookingId']?.toString() ?? '',
+      guestName: json['guestName']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      bookingStatus: json['bookingStatus']?.toString() ?? '',
+      rooms: (json['rooms'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      rating: (json['rating'] as num?)?.toInt() ?? 0,
+      comment: json['comment']?.toString() ?? '',
+      createdAt: json['createdAt']?.toString() ?? '',
+    );
+  }
+}
+
+class SubmitFeedbackPayload {
+  SubmitFeedbackPayload({
+    required this.bookingId,
+    required this.rating,
+    required this.comment,
+  });
+
+  final String bookingId;
+  final int rating;
+  final String comment;
+
+  Map<String, dynamic> toJson() => {
+    'bookingId': bookingId,
+    'rating': rating,
+    'comment': comment,
+  };
+}
+
+class HotelServiceModel {
+  HotelServiceModel({
+    required this.serviceId,
+    required this.serviceName,
+    required this.description,
+    required this.price,
+  });
+
+  final String serviceId;
+  final String serviceName;
+  final String description;
+  final double price;
+
+  factory HotelServiceModel.fromJson(Map<String, dynamic> json) {
+    return HotelServiceModel(
+      serviceId: json['serviceId']?.toString() ?? '',
+      serviceName: json['serviceName']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class CreateServiceOrderPayload {
+  CreateServiceOrderPayload({required this.bookingId, required this.services});
+
+  final String bookingId;
+  final List<ServiceOrderLinePayload> services;
+
+  Map<String, dynamic> toJson() => {
+    'bookingId': bookingId,
+    'services': services.map((service) => service.toJson()).toList(),
+  };
+}
+
+class ServiceOrderLinePayload {
+  ServiceOrderLinePayload({required this.serviceId, required this.quantity});
+
+  final String serviceId;
+  final int quantity;
+
+  Map<String, dynamic> toJson() => {
+    'serviceId': serviceId,
+    'quantity': quantity,
+  };
+}
+
+class ServiceOrderModel {
+  ServiceOrderModel({
+    required this.orderId,
+    required this.bookingId,
+    required this.guestName,
+    required this.phone,
+    required this.status,
+    required this.totalAmount,
+    required this.orderedAt,
+    required this.services,
+  });
+
+  final String orderId;
+  final String bookingId;
+  final String guestName;
+  final String phone;
+  final String status;
+  final double totalAmount;
+  final String orderedAt;
+  final List<ServiceOrderLineModel> services;
+
+  bool get canGuestCancel {
+    final normalized = status.toUpperCase();
+    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+  }
+
+  factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {
+    return ServiceOrderModel(
+      orderId: json['orderId']?.toString() ?? '',
+      bookingId: json['bookingId']?.toString() ?? '',
+      guestName: json['guestName']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      orderedAt: json['orderedAt']?.toString() ?? '',
+      services: (json['services'] as List<dynamic>? ?? [])
+          .map(
+            (e) => ServiceOrderLineModel.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class ServiceOrderLineModel {
+  ServiceOrderLineModel({
+    required this.serviceId,
+    required this.serviceName,
+    required this.quantity,
+    required this.priceAtOrder,
+    required this.lineTotal,
+  });
+
+  final String serviceId;
+  final String serviceName;
+  final int quantity;
+  final double priceAtOrder;
+  final double lineTotal;
+
+  factory ServiceOrderLineModel.fromJson(Map<String, dynamic> json) {
+    return ServiceOrderLineModel(
+      serviceId: json['serviceId']?.toString() ?? '',
+      serviceName: json['serviceName']?.toString() ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      priceAtOrder: (json['priceAtOrder'] as num?)?.toDouble() ?? 0,
+      lineTotal: (json['lineTotal'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
 class RoomTypeModel {
   RoomTypeModel({
     required this.roomTypeId,
@@ -302,7 +543,8 @@ class RoomTypeModel {
 
   factory RoomTypeModel.fromJson(Map<String, dynamic> json) {
     final name = json['typeName']?.toString() ?? json['name']?.toString() ?? '';
-    final imageUrl = json['imageUrl']?.toString() ?? json['imageURL']?.toString();
+    final imageUrl =
+        json['imageUrl']?.toString() ?? json['imageURL']?.toString();
     return RoomTypeModel(
       roomTypeId: json['roomTypeId']?.toString() ?? '',
       name: name,
@@ -357,8 +599,11 @@ class RoomModel {
         : (json['basePrice'] as num?)?.toDouble();
 
     final imageUrl = roomTypeJson is Map
-        ? roomTypeJson['imageUrl']?.toString() ?? roomTypeJson['imageURL']?.toString()
-        : json['imageUrl']?.toString() ?? json['imageURL']?.toString() ?? json['imagePath']?.toString();
+        ? roomTypeJson['imageUrl']?.toString() ??
+              roomTypeJson['imageURL']?.toString()
+        : json['imageUrl']?.toString() ??
+              json['imageURL']?.toString() ??
+              json['imagePath']?.toString();
 
     return RoomModel(
       roomId: json['roomId']?.toString() ?? '',
@@ -373,7 +618,9 @@ class RoomModel {
       roomTypeName: roomTypeName,
       description: description,
       basePrice: basePrice,
-      imagePath: imageUrl ?? 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80',
+      imagePath:
+          imageUrl ??
+          'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80',
     );
   }
 }

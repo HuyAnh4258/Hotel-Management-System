@@ -1,18 +1,25 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 
-import 'package:booking_app/app.dart';
+import 'package:booking_app/modules/auth/viewmodel/auth_viewmodel.dart';
+import 'package:booking_app/modules/booking/view/booking_home_page.dart';
+import 'package:booking_app/modules/booking/viewmodel/booking_viewmodel.dart';
 
 void main() {
-  testWidgets('Booking app builds', (WidgetTester tester) async {
-    await tester.pumpWidget(const BookingApp());
+  tearDown(Get.reset);
+
+  testWidgets('Booking app renders home shell', (WidgetTester tester) async {
+    Get.put(AuthViewModel());
+
+    await tester.pumpWidget(
+      GetMaterialApp(
+        home: BookingHomePage(
+          homepageFuture: Future.value(HomepageData.empty()),
+        ),
+      ),
+    );
     await tester.pump();
-    expect(find.text('FPT Golden'), findsOneWidget);
+
+    expect(find.text('Hotel Booking'), findsOneWidget);
   });
 }

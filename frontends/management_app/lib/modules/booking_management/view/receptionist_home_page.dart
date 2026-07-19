@@ -544,6 +544,65 @@ class ReceptionistHomePage extends StatelessWidget {
             );
           },
         ),
+        ActionCardWidget(
+          label: 'View Order Status',
+          description: 'Xem trang thai order dich vu',
+          icon: Icons.list_alt_rounded,
+          themeColor: Colors.blueAccent,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ServiceOrderStatusPage(canUpdate: false),
+              ),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Update Order Status',
+          description: 'Cap nhat tien do order dich vu',
+          icon: Icons.manage_history_rounded,
+          themeColor: Colors.teal,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ServiceOrderStatusPage(canUpdate: true),
+              ),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Export Invoice',
+          description: 'Xuat hoa don order dich vu',
+          icon: Icons.receipt_long_rounded,
+          themeColor: Colors.indigo,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ExportInvoicePage()),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'View Order Requests',
+          description: 'Xem cac order dang cho xu ly',
+          icon: Icons.pending_actions_rounded,
+          themeColor: Colors.amber.shade700,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OrderRequestsPage()),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Process Order',
+          description: 'Nhan va hoan tat order dich vu',
+          icon: Icons.playlist_add_check_circle_rounded,
+          themeColor: Colors.green,
+          onTap: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProcessOrderPage()));
+          },
+        ),
       ]),
     );
   }
