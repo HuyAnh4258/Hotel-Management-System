@@ -5,28 +5,33 @@ server:
 spring:
   # Cấu hình kết nối MySQL
   datasource:
-    # Thay 'HotelDB_Schema' bằng tên database thực tế của bạn nếu khác
-    url: jdbc:mysql://localhost:3306/HotelDB_Schema?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
+    url: jdbc:mysql://localhost:3306/HotelDB_Schema?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # Cấu hình JPA / Hibernate
   jpa:
     hibernate:
-      # 'validate': Chỉ kiểm tra Entity có khớp DB hay không, không tự ý tạo thêm cột/bảng
-      ddl-auto: validate
-    show-sql: true # Bật tính năng này để console in ra các câu lệnh SQL, rất dễ debug
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
-# Cấu hình đường dẫn cho Swagger (Tài liệu API)
+# Cấu hình đường dẫn cho Swagger
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
-    operationsSorter: method # Sắp xếp các API theo GET, POST, PUT, DELETE
+    operationsSorter: method
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:this-is-a-256-bit-secret-key-for-hms-project-change-in-production!!}
+  expiration: 86400000

@@ -39,7 +39,7 @@ src/main/java/com/hotel/hms/
     ├── employee_management/      → EmployeeProfile
     ├── property_management/      → RoomType, Room, MaintenanceRequest
     ├── booking_management/       → Booking, RoomBooking, Voucher, Payment, Surcharge, Feedback
-    ├── catalogue_management/     → Service, Order, SO_InventoryItem, SO_Service, InventoryItem, InventoryAdjustment, Expense
+    ├── catalogue_management/     → Service, Order, Service_Inventory_Recipe, SO_InventoryItem, SO_Service, InventoryItem, InventoryAdjustment, Expense
     └── operation_analysis/       → AuditLog
 ```
 
