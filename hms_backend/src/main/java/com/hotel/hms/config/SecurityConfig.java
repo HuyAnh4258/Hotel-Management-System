@@ -22,7 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-
     private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
@@ -36,6 +35,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/booking/**").permitAll()
+                .requestMatchers("/api/accounts/**").permitAll()
+                .requestMatchers("/api/reports/**").permitAll()
+                .requestMatchers("/api/orders/**").permitAll()
+                .requestMatchers("/api/rooms/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll()

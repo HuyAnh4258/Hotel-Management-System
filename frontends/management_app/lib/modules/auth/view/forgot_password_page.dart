@@ -531,8 +531,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
             validator: (v) {
               if (v!.trim().isEmpty) return 'Vui lòng nhập mật khẩu mới';
-              if (v.trim().length < 6)
-                return 'Mật khẩu phải từ 6 ký tự trở lên';
+              final passwordRegExp = RegExp(
+                  r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$%^&+=*!]).{8,}$");
+              if (!passwordRegExp.hasMatch(v.trim())) {
+                return 'Mật khẩu phải từ 8 ký tự, gồm chữ hoa, thường, số và ký tự đặc biệt';
+              }
               return null;
             },
           ),
@@ -546,6 +549,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
             validator: (v) {
               if (v!.trim().isEmpty) return 'Vui lòng xác nhận mật khẩu';
+              if (v.trim() != _newPasswordCtrl.text.trim()) {
+                return 'Mật khẩu xác nhận không khớp';
+              }
               return null;
             },
           ),

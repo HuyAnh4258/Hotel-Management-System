@@ -363,7 +363,15 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextFormField(
       controller: controller,
       obscureText: true,
-      validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Vui lòng nhập $label';
+        final passwordRegExp = RegExp(
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$%^&+=*!]).{8,}$");
+        if (!passwordRegExp.hasMatch(v.trim())) {
+          return 'Mật khẩu phải từ 8 ký tự, gồm chữ hoa, thường, số và ký tự đặc biệt';
+        }
+        return null;
+      },
       decoration: InputDecoration(
         hintText: label,
         prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B7280)),

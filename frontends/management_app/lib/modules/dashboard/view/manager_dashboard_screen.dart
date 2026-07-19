@@ -269,11 +269,13 @@ class ManagerDashboardScreen extends StatelessWidget {
       ),
       // Pillar 4: Nhân sự
       SummaryCardWidget(
-        title: 'Yêu cầu cập nhật',
-        metrics: ['Đang chờ: ${vm.pendingProfileUpdates.value}'],
+        title: 'Nhân sự hệ thống',
+        metrics: const [
+          'Quản lý tài khoản',
+          'Thiết lập phân quyền',
+        ],
         icon: Icons.people_outline,
         themeColor: AppColors.warning,
-        badgeCount: vm.pendingProfileUpdates.value,
       ),
       // Pillar 5: Bảo trì
       SummaryCardWidget(
@@ -340,13 +342,13 @@ class ManagerDashboardScreen extends StatelessWidget {
         themeColor: AppColors.success,
         onTap: () => Get.toNamed('/property'),
       ),
-      // Pillar 4: Employees
+      // Pillar 4: Employees & Accounts merged
       ActionCardWidget(
-        label: 'Quản lý nhân viên',
-        description: 'Hồ sơ & Phân công công việc',
-        icon: Icons.people,
+        label: 'Nhân sự & Tài khoản',
+        description: 'Quản lý nhân viên & Phân quyền user',
+        icon: Icons.manage_accounts,
         themeColor: AppColors.warning,
-        onTap: () => Get.toNamed('/employees'),
+        onTap: () => Get.toNamed('/accounts'),
       ),
       // Pillar 5: Maintenance
       ActionCardWidget(
@@ -409,65 +411,74 @@ class ManagerDashboardScreen extends StatelessWidget {
       ),
       actions: [
         Obx(
-          () => Container(
-            margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Center(
-                    child: Text(
-                      (auth.fullName.value.isNotEmpty
-                              ? auth.fullName.value
-                              : auth.username.value.isNotEmpty
-                              ? auth.username.value
-                              : 'U')[0]
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+          () => GestureDetector(
+            onTap: () => Get.toNamed('/profile'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (auth.fullName.value.isNotEmpty
+                                ? auth.fullName.value
+                                : auth.username.value.isNotEmpty
+                                ? auth.username.value
+                                : 'U')[0]
+                            .toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      auth.fullName.value.isNotEmpty
-                          ? auth.fullName.value
-                          : auth.username.value.isNotEmpty
-                          ? auth.username.value
-                          : 'User',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        auth.fullName.value.isNotEmpty
+                            ? auth.fullName.value
+                            : auth.username.value.isNotEmpty
+                            ? auth.username.value
+                            : 'User',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _roleLabel(auth.roles.firstOrNull ?? ''),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white60,
+                      Text(
+                        _roleLabel(auth.roles.firstOrNull ?? ''),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: Colors.white60,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.edit_outlined,
+                    size: 13,
+                    color: Colors.white54,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
