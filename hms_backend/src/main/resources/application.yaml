@@ -20,6 +20,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
 # Cấu hình đường dẫn cho Swagger
 springdoc:

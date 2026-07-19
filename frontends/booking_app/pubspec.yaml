@@ -10,8 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.8
+  dio: ^5.10.0
   get: ^4.7.3
   hms_shared:
     path: ../hms_shared
@@ -19,8 +19,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - asset/images_booking/
