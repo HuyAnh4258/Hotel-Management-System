@@ -60,7 +60,9 @@ class ReceptionistHomePage extends StatelessWidget {
                     child: SizedBox(
                       height: 100,
                       child: Center(
-                        child: CircularProgressIndicator(color: AppColors.accent),
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                        ),
                       ),
                     ),
                   );
@@ -356,7 +358,8 @@ class ReceptionistHomePage extends StatelessWidget {
   // ─── Hero Banner ──────────────────────────────────────────────
   Widget _buildHeroBanner(AuthService auth) {
     final now = DateTime.now();
-    final dateStr = '${now.day.toString().padLeft(2, '0')}/'
+    final dateStr =
+        '${now.day.toString().padLeft(2, '0')}/'
         '${now.month.toString().padLeft(2, '0')}/'
         '${now.year}';
     final name = auth.fullName.value.isNotEmpty
@@ -366,8 +369,8 @@ class ReceptionistHomePage extends StatelessWidget {
     final greeting = hour < 12
         ? 'Chào buổi sáng'
         : hour < 18
-            ? 'Chào buổi chiều'
-            : 'Chào buổi tối';
+        ? 'Chào buổi chiều'
+        : 'Chào buổi tối';
 
     return Container(
       width: double.infinity,
@@ -402,7 +405,10 @@ class ReceptionistHomePage extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.accent.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -432,11 +438,7 @@ class ReceptionistHomePage extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'Hệ thống quản lý check-in, check-out và tiếp nhận yêu cầu hủy phòng từ khách hàng.',
-            style: TextStyle(
-              color: Colors.white60,
-              fontSize: 13,
-              height: 1.4,
-            ),
+            style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -444,7 +446,11 @@ class ReceptionistHomePage extends StatelessWidget {
   }
 
   // ─── Summary Section ──────────────────────────────────────────
-  Widget _buildSummaryGrid(ManagerDashboardViewModel vm, bool isWide, double width) {
+  Widget _buildSummaryGrid(
+    ManagerDashboardViewModel vm,
+    bool isWide,
+    double width,
+  ) {
     int cols = 2;
     double ratio = 2.1;
 
@@ -509,9 +515,9 @@ class ReceptionistHomePage extends StatelessWidget {
           icon: Icons.bed,
           themeColor: Colors.orange,
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RoomStatusPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const RoomStatusPage()));
           },
         ),
         ActionCardWidget(
@@ -520,9 +526,9 @@ class ReceptionistHomePage extends StatelessWidget {
           icon: Icons.badge,
           themeColor: Colors.deepOrange,
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CheckInOutPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CheckInOutPage()));
           },
         ),
         ActionCardWidget(
@@ -534,6 +540,65 @@ class ReceptionistHomePage extends StatelessWidget {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CancelRequestsPage()),
             );
+          },
+        ),
+        ActionCardWidget(
+          label: 'View Order Status',
+          description: 'Xem trang thai order dich vu',
+          icon: Icons.list_alt_rounded,
+          themeColor: Colors.blueAccent,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ServiceOrderStatusPage(canUpdate: false),
+              ),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Update Order Status',
+          description: 'Cap nhat tien do order dich vu',
+          icon: Icons.manage_history_rounded,
+          themeColor: Colors.teal,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ServiceOrderStatusPage(canUpdate: true),
+              ),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Export Invoice',
+          description: 'Xuat hoa don order dich vu',
+          icon: Icons.receipt_long_rounded,
+          themeColor: Colors.indigo,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ExportInvoicePage()),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'View Order Requests',
+          description: 'Xem cac order dang cho xu ly',
+          icon: Icons.pending_actions_rounded,
+          themeColor: Colors.amber.shade700,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OrderRequestsPage()),
+            );
+          },
+        ),
+        ActionCardWidget(
+          label: 'Process Order',
+          description: 'Nhan va hoan tat order dich vu',
+          icon: Icons.playlist_add_check_circle_rounded,
+          themeColor: Colors.green,
+          onTap: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProcessOrderPage()));
           },
         ),
       ]),

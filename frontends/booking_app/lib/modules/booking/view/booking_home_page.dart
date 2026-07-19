@@ -7,7 +7,9 @@ import '../widgets/room_type_card.dart';
 import 'booking_pages.dart';
 
 class BookingHomePage extends StatefulWidget {
-  const BookingHomePage({super.key});
+  const BookingHomePage({super.key, this.homepageFuture});
+
+  final Future<HomepageData>? homepageFuture;
 
   @override
   State<BookingHomePage> createState() => _BookingHomePageState();
@@ -19,7 +21,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
   @override
   void initState() {
     super.initState();
-    _homepageFuture = BookingApi.getHomepage();
+    _homepageFuture = widget.homepageFuture ?? BookingApi.getHomepage();
   }
 
   Future<void> _reload() async {
@@ -274,8 +276,1085 @@ class _GuestHeader extends StatelessWidget {
               label: const Text('Lịch sử đơn hàng'),
             ),
           ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MakeServiceOrderPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.room_service_rounded),
+              label: const Text('Make Order'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CancelServiceOrderPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.cancel_schedule_send_rounded),
+              label: const Text('Cancel Order'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FeedbackListPage()),
+                );
+              },
+              icon: const Icon(Icons.reviews_rounded),
+              label: const Text('View Review & Feedback'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SubmitFeedbackPage()),
+                );
+              },
+              icon: const Icon(Icons.rate_review_rounded),
+              label: const Text('Submit Review & Feedback'),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class MakeServiceOrderPage extends StatefulWidget {
+  const MakeServiceOrderPage({super.key});
+
+  @override
+  State<MakeServiceOrderPage> createState() => _MakeServiceOrderPageState();
+}
+
+class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
+  late Future<_MakeServiceOrderData> _dataFuture;
+  final Map<String, int> _quantities = {};
+  String? _selectedBookingId;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataFuture = _loadData();
+  }
+
+  Future<_MakeServiceOrderData> _loadData() async {
+    final bookingsFuture = BookingApi.getBookings();
+    final servicesFuture = BookingApi.getServices();
+    return _MakeServiceOrderData(
+      bookings: await bookingsFuture,
+      services: await servicesFuture,
+    );
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _dataFuture = _loadData();
+    });
+  }
+
+  double _total(List<HotelServiceModel> services) {
+    return services.fold<double>(0, (sum, service) {
+      final quantity = _quantities[service.serviceId] ?? 0;
+      return sum + service.price * quantity;
+    });
+  }
+
+  Future<void> _submit(List<HotelServiceModel> services) async {
+    final bookingId = _selectedBookingId;
+    final selectedServices = services
+        .map(
+          (service) => ServiceOrderLinePayload(
+            serviceId: service.serviceId,
+            quantity: _quantities[service.serviceId] ?? 0,
+          ),
+        )
+        .where((line) => line.quantity > 0)
+        .toList();
+
+    if (bookingId == null || bookingId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select a booking first')));
+      return;
+    }
+    if (selectedServices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one service')),
+      );
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      final order = await BookingApi.createServiceOrder(
+        CreateServiceOrderPayload(
+          bookingId: bookingId,
+          services: selectedServices,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _quantities.clear();
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Created order ${order.orderId}')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Make order failed: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderScaffold(
+      title: 'Make Order',
+      child: RefreshIndicator(
+        onRefresh: _reload,
+        child: FutureBuilder<_MakeServiceOrderData>(
+          future: _dataFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [_ErrorCard(onRetry: _reload)],
+              );
+            }
+
+            final data = snapshot.data ?? _MakeServiceOrderData.empty();
+            final activeBookings = data.bookings.where((booking) {
+              final status = booking.status.toUpperCase();
+              return status != 'CANCELLED' && status != 'CHECKED_OUT';
+            }).toList();
+            final selectedExists = activeBookings.any(
+              (booking) => booking.bookingId == _selectedBookingId,
+            );
+
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+              children: [
+                _ServiceOrderHeader(
+                  title: 'Make Order',
+                  subtitle: 'Guest selects a booking and service items.',
+                  badge: 'Total: ${_formatMoney(_total(data.services))}',
+                ),
+                const SizedBox(height: 18),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedExists ? _selectedBookingId : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Booking',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: activeBookings
+                      .map(
+                        (booking) => DropdownMenuItem(
+                          value: booking.bookingId,
+                          child: Text(
+                            '${booking.bookingId} - ${booking.guestName}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedBookingId = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 18),
+                if (data.services.isEmpty)
+                  const Text('No services available')
+                else
+                  ...data.services.map(
+                    (service) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ServiceCatalogTile(
+                        service: service,
+                        quantity: _quantities[service.serviceId] ?? 0,
+                        onChanged: (quantity) {
+                          setState(() {
+                            if (quantity <= 0) {
+                              _quantities.remove(service.serviceId);
+                            } else {
+                              _quantities[service.serviceId] = quantity;
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: _submitting ? null : () => _submit(data.services),
+                  icon: _submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_circle_rounded),
+                  label: const Text('Make Order'),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class CancelServiceOrderPage extends StatefulWidget {
+  const CancelServiceOrderPage({super.key});
+
+  @override
+  State<CancelServiceOrderPage> createState() => _CancelServiceOrderPageState();
+}
+
+class _CancelServiceOrderPageState extends State<CancelServiceOrderPage> {
+  late Future<List<ServiceOrderModel>> _ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersFuture = BookingApi.getServiceOrders();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _ordersFuture = BookingApi.getServiceOrders();
+    });
+  }
+
+  Future<void> _cancel(ServiceOrderModel order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: Text('Cancel service order ${order.orderId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await BookingApi.cancelServiceOrder(order.orderId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Cancelled order ${order.orderId}')));
+    await _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ServiceOrderListBody(
+      title: 'Cancel Order',
+      subtitle: 'Guest can cancel pending or in-progress service orders.',
+      ordersFuture: _ordersFuture,
+      onRefresh: _reload,
+      onCancel: _cancel,
+    );
+  }
+}
+
+class _MakeServiceOrderData {
+  const _MakeServiceOrderData({required this.bookings, required this.services});
+
+  final List<BookingSummary> bookings;
+  final List<HotelServiceModel> services;
+
+  factory _MakeServiceOrderData.empty() =>
+      const _MakeServiceOrderData(bookings: [], services: []);
+}
+
+class _ServiceOrderListBody extends StatelessWidget {
+  const _ServiceOrderListBody({
+    required this.title,
+    required this.subtitle,
+    required this.ordersFuture,
+    required this.onRefresh,
+    this.onCancel,
+  });
+
+  final String title;
+  final String subtitle;
+  final Future<List<ServiceOrderModel>> ordersFuture;
+  final Future<void> Function() onRefresh;
+  final Future<void> Function(ServiceOrderModel order)? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderScaffold(
+      title: title,
+      child: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: FutureBuilder<List<ServiceOrderModel>>(
+          future: ordersFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [_ErrorCard(onRetry: onRefresh)],
+              );
+            }
+
+            final orders = snapshot.data ?? [];
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+              children: [
+                _ServiceOrderHeader(
+                  title: title,
+                  subtitle: subtitle,
+                  badge: '${orders.length} orders',
+                ),
+                const SizedBox(height: 18),
+                if (orders.isEmpty)
+                  const Text('No service orders yet')
+                else
+                  ...orders.map(
+                    (order) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ServiceOrderCard(
+                        order: order,
+                        onCancel: onCancel == null || !order.canGuestCancel
+                            ? null
+                            : () => onCancel!(order),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderScaffold extends StatelessWidget {
+  const _OrderScaffold({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              scheme.primary.withValues(alpha: 0.14),
+              const Color(0xFFF6F8FC),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _ServiceOrderHeader extends StatelessWidget {
+  const _ServiceOrderHeader({
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+  });
+
+  final String title;
+  final String subtitle;
+  final String badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 12),
+          _Badge(label: badge, color: Colors.orange),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceCatalogTile extends StatelessWidget {
+  const _ServiceCatalogTile({
+    required this.service,
+    required this.quantity,
+    required this.onChanged,
+  });
+
+  final HotelServiceModel service;
+  final int quantity;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.room_service_rounded, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  service.serviceName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (service.description.isNotEmpty) Text(service.description),
+                Text(_formatMoney(service.price)),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            onPressed: quantity <= 0 ? null : () => onChanged(quantity - 1),
+            icon: const Icon(Icons.remove_rounded),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text(
+              '$quantity',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+          IconButton.filled(
+            onPressed: () => onChanged(quantity + 1),
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceOrderCard extends StatelessWidget {
+  const _ServiceOrderCard({required this.order, required this.onCancel});
+
+  final ServiceOrderModel order;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.guestName.isEmpty ? order.bookingId : order.guestName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _Badge(
+                label: order.status,
+                color: _orderStatusColor(order.status),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Order: ${order.orderId}'),
+          Text('Booking: ${order.bookingId}'),
+          Text('Phone: ${order.phone}'),
+          Text('Total: ${_formatMoney(order.totalAmount)}'),
+          if (order.services.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...order.services.map(
+              (line) => Text(
+                '${line.serviceName} x${line.quantity} - ${_formatMoney(line.lineTotal)}',
+              ),
+            ),
+          ],
+          if (onCancel != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.cancel_schedule_send_rounded),
+                label: const Text('Cancel Order'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Color _orderStatusColor(String status) {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED':
+      return Colors.green;
+    case 'CANCELLED':
+      return Colors.red;
+    case 'IN_PROGRESS':
+      return Colors.blue;
+    default:
+      return Colors.orange;
+  }
+}
+
+String _formatMoney(num value) => '${value.toStringAsFixed(0)} VND';
+
+class FeedbackListPage extends StatefulWidget {
+  const FeedbackListPage({super.key});
+
+  @override
+  State<FeedbackListPage> createState() => _FeedbackListPageState();
+}
+
+class _FeedbackListPageState extends State<FeedbackListPage> {
+  late Future<List<FeedbackModel>> _feedbackFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackFuture = BookingApi.getFeedbacks();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _feedbackFuture = BookingApi.getFeedbacks();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('Review & Feedback'),
+        backgroundColor: Colors.transparent,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              scheme.primary.withValues(alpha: 0.14),
+              const Color(0xFFF6F8FC),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: FutureBuilder<List<FeedbackModel>>(
+            future: _feedbackFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                  children: [_ErrorCard(onRetry: _reload)],
+                );
+              }
+
+              final feedbacks = snapshot.data ?? [];
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [
+                  _FeedbackHeader(totalFeedbacks: feedbacks.length),
+                  const SizedBox(height: 18),
+                  if (feedbacks.isEmpty)
+                    const Text('No feedback yet')
+                  else
+                    ...feedbacks.map(
+                      (feedback) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _FeedbackCard(feedback: feedback),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SubmitFeedbackPage extends StatefulWidget {
+  const SubmitFeedbackPage({super.key});
+
+  @override
+  State<SubmitFeedbackPage> createState() => _SubmitFeedbackPageState();
+}
+
+class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
+  late Future<List<BookingSummary>> _bookingsFuture;
+  final TextEditingController _commentController = TextEditingController();
+  String? _selectedBookingId;
+  int _rating = 5;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bookingsFuture = BookingApi.getBookings();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _bookingsFuture = BookingApi.getBookings();
+    });
+  }
+
+  Future<void> _submit() async {
+    final bookingId = _selectedBookingId;
+    if (bookingId == null || bookingId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select a booking first')));
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      final feedback = await BookingApi.submitFeedback(
+        SubmitFeedbackPayload(
+          bookingId: bookingId,
+          rating: _rating,
+          comment: _commentController.text,
+        ),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Saved feedback for booking ${feedback.bookingId}'),
+        ),
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const FeedbackListPage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Submit feedback failed: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('Submit Feedback'),
+        backgroundColor: Colors.transparent,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              scheme.primary.withValues(alpha: 0.14),
+              const Color(0xFFF6F8FC),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: FutureBuilder<List<BookingSummary>>(
+            future: _bookingsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                  children: [_ErrorCard(onRetry: _reload)],
+                );
+              }
+
+              final bookings = snapshot.data ?? [];
+              final selectedExists = bookings.any(
+                (booking) => booking.bookingId == _selectedBookingId,
+              );
+
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [
+                  const _SubmitFeedbackHeader(),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedExists ? _selectedBookingId : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Booking',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: bookings
+                        .map(
+                          (booking) => DropdownMenuItem(
+                            value: booking.bookingId,
+                            child: Text(
+                              '${booking.bookingId} - ${booking.guestName}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedBookingId = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _RatingSelector(
+                    rating: _rating,
+                    onChanged: (rating) {
+                      setState(() {
+                        _rating = rating;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _commentController,
+                    minLines: 4,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'Comment',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: _submitting ? null : _submit,
+                    icon: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_rounded),
+                    label: const Text('Submit Review & Feedback'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackHeader extends StatelessWidget {
+  const _FeedbackHeader({required this.totalFeedbacks});
+
+  final int totalFeedbacks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Review & Feedback',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'View guest reviews and ratings submitted for bookings.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 12),
+          _Badge(label: '$totalFeedbacks feedback', color: Colors.orange),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmitFeedbackHeader extends StatelessWidget {
+  const _SubmitFeedbackHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Submit Review & Feedback',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Select a booking, choose a rating, and add a short comment.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackCard extends StatelessWidget {
+  const _FeedbackCard({required this.feedback});
+
+  final FeedbackModel feedback;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  feedback.guestName.isEmpty ? 'Guest' : feedback.guestName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _StarRating(rating: feedback.rating),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Booking: ${feedback.bookingId}'),
+          if (feedback.rooms.isNotEmpty)
+            Text('Room: ${feedback.rooms.join(", ")}'),
+          if (feedback.comment.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(feedback.comment),
+          ],
+          const SizedBox(height: 10),
+          _Badge(label: feedback.bookingStatus, color: Colors.orange),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingSelector extends StatelessWidget {
+  const _RatingSelector({required this.rating, required this.onChanged});
+
+  final int rating;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Rating',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          ...List.generate(5, (index) {
+            final value = index + 1;
+            return IconButton(
+              onPressed: () => onChanged(value),
+              icon: Icon(
+                value <= rating
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                color: value <= rating ? Colors.amber.shade700 : scheme.outline,
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.rating});
+
+  final int rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        final value = index + 1;
+        return Icon(
+          value <= rating ? Icons.star_rounded : Icons.star_border_rounded,
+          color: Colors.amber.shade700,
+          size: 18,
+        );
+      }),
     );
   }
 }

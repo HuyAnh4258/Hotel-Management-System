@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:hms_shared/auth/auth_service.dart';
 import '../viewmodel/booking_viewmodel.dart';
-
 
 class CancelRequestsPage extends StatefulWidget {
   const CancelRequestsPage({super.key});
@@ -666,6 +666,643 @@ class _RoomStatusCard extends StatelessWidget {
     );
   }
 }
+
+class ServiceOrderStatusPage extends StatefulWidget {
+  const ServiceOrderStatusPage({super.key, required this.canUpdate});
+
+  final bool canUpdate;
+
+  @override
+  State<ServiceOrderStatusPage> createState() => _ServiceOrderStatusPageState();
+}
+
+class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
+  late Future<List<ServiceOrderModel>> _ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersFuture = BookingApi.getServiceOrders();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _ordersFuture = BookingApi.getServiceOrders();
+    });
+  }
+
+  Future<void> _update(ServiceOrderModel order, String status) async {
+    await BookingApi.updateServiceOrderStatus(order.orderId, status);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Updated ${order.orderId} to $status')),
+    );
+    await _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final title = widget.canUpdate
+        ? 'Update Order Status'
+        : 'View Order Status';
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              scheme.primary.withValues(alpha: 0.14),
+              const Color(0xFFF6F8FC),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: FutureBuilder<List<ServiceOrderModel>>(
+            future: _ordersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                  children: [_ErrorCard(onRetry: _reload)],
+                );
+              }
+
+              final orders = snapshot.data ?? [];
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [
+                  _ServiceOrderHeader(
+                    title: title,
+                    subtitle: widget.canUpdate
+                        ? 'Receptionist updates service order progress.'
+                        : 'Receptionist views all service order statuses.',
+                    totalOrders: orders.length,
+                  ),
+                  const SizedBox(height: 18),
+                  if (orders.isEmpty)
+                    const Text('No service orders yet')
+                  else
+                    ...orders.map(
+                      (order) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ServiceOrderCard(
+                          order: order,
+                          canUpdate: widget.canUpdate,
+                          onUpdate: (status) => _update(order, status),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ExportInvoicePage extends StatelessWidget {
+  const ExportInvoicePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ServiceOrderWorkflowPage(
+      mode: _ServiceOrderWorkflowMode.invoice,
+    );
+  }
+}
+
+class OrderRequestsPage extends StatelessWidget {
+  const OrderRequestsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ServiceOrderWorkflowPage(
+      mode: _ServiceOrderWorkflowMode.requests,
+    );
+  }
+}
+
+class ProcessOrderPage extends StatelessWidget {
+  const ProcessOrderPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ServiceOrderWorkflowPage(
+      mode: _ServiceOrderWorkflowMode.process,
+    );
+  }
+}
+
+enum _ServiceOrderWorkflowMode { invoice, requests, process }
+
+class _ServiceOrderWorkflowPage extends StatefulWidget {
+  const _ServiceOrderWorkflowPage({required this.mode});
+
+  final _ServiceOrderWorkflowMode mode;
+
+  @override
+  State<_ServiceOrderWorkflowPage> createState() =>
+      _ServiceOrderWorkflowPageState();
+}
+
+class _ServiceOrderWorkflowPageState extends State<_ServiceOrderWorkflowPage> {
+  late Future<List<ServiceOrderModel>> _ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersFuture = BookingApi.getServiceOrders();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _ordersFuture = BookingApi.getServiceOrders();
+    });
+  }
+
+  Future<void> _update(ServiceOrderModel order, String status) async {
+    await BookingApi.updateServiceOrderStatus(order.orderId, status);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Updated ${order.orderId} to $status')),
+    );
+    await _reload();
+  }
+
+  Future<void> _copyInvoice(ServiceOrderModel order) async {
+    await Clipboard.setData(ClipboardData(text: _buildInvoiceText(order)));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Invoice copied for ${order.orderId}')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final title = _workflowTitle(widget.mode);
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              scheme.primary.withValues(alpha: 0.14),
+              const Color(0xFFF6F8FC),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: FutureBuilder<List<ServiceOrderModel>>(
+            future: _ordersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                  children: [_ErrorCard(onRetry: _reload)],
+                );
+              }
+
+              final orders = (snapshot.data ?? [])
+                  .where((order) => _matchesWorkflow(widget.mode, order))
+                  .toList();
+
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [
+                  _ServiceOrderHeader(
+                    title: title,
+                    subtitle: _workflowSubtitle(widget.mode),
+                    totalOrders: orders.length,
+                  ),
+                  const SizedBox(height: 18),
+                  if (orders.isEmpty)
+                    Text(_workflowEmptyText(widget.mode))
+                  else
+                    ...orders.map(
+                      (order) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildWorkflowCard(order),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkflowCard(ServiceOrderModel order) {
+    switch (widget.mode) {
+      case _ServiceOrderWorkflowMode.invoice:
+        return _InvoiceOrderCard(
+          order: order,
+          onCopy: () => _copyInvoice(order),
+        );
+      case _ServiceOrderWorkflowMode.requests:
+        return _RequestOrderCard(order: order);
+      case _ServiceOrderWorkflowMode.process:
+        return _ProcessOrderCard(
+          order: order,
+          onStart: order.status.toUpperCase() == 'PENDING'
+              ? () => _update(order, 'IN_PROGRESS')
+              : null,
+          onComplete: order.status.toUpperCase() == 'IN_PROGRESS'
+              ? () => _update(order, 'COMPLETED')
+              : null,
+        );
+    }
+  }
+}
+
+class _RequestOrderCard extends StatelessWidget {
+  const _RequestOrderCard({required this.order});
+
+  final ServiceOrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderInfoCard(
+      order: order,
+      footer: const Text(
+        'Waiting for receptionist to process this request.',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _ProcessOrderCard extends StatelessWidget {
+  const _ProcessOrderCard({
+    required this.order,
+    required this.onStart,
+    required this.onComplete,
+  });
+
+  final ServiceOrderModel order;
+  final VoidCallback? onStart;
+  final VoidCallback? onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderInfoCard(
+      order: order,
+      footer: Row(
+        children: [
+          if (onStart != null)
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Start Process'),
+              ),
+            ),
+          if (onStart != null && onComplete != null) const SizedBox(width: 8),
+          if (onComplete != null)
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onComplete,
+                icon: const Icon(Icons.check_circle_outline_rounded),
+                label: const Text('Complete Order'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvoiceOrderCard extends StatelessWidget {
+  const _InvoiceOrderCard({required this.order, required this.onCopy});
+
+  final ServiceOrderModel order;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderInfoCard(
+      order: order,
+      footer: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: onCopy,
+          icon: const Icon(Icons.copy_rounded),
+          label: const Text('Copy Invoice'),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderInfoCard extends StatelessWidget {
+  const _OrderInfoCard({required this.order, required this.footer});
+
+  final ServiceOrderModel order;
+  final Widget footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.guestName.isEmpty ? order.bookingId : order.guestName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _Badge(
+                label: order.status,
+                color: _serviceOrderStatusColor(order.status),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Order: ${order.orderId}'),
+          Text('Booking: ${order.bookingId}'),
+          Text('Phone: ${order.phone}'),
+          Text('Ordered at: ${order.orderedAt}'),
+          const SizedBox(height: 8),
+          if (order.services.isEmpty)
+            const Text('No services in this order')
+          else
+            ...order.services.map(
+              (line) => Text(
+                '${line.serviceName} x${line.quantity} - ${_formatMoney(line.lineTotal)}',
+              ),
+            ),
+          const Divider(height: 20),
+          Text(
+            'Total: ${_formatMoney(order.totalAmount)}',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          footer,
+        ],
+      ),
+    );
+  }
+}
+
+String _workflowTitle(_ServiceOrderWorkflowMode mode) {
+  switch (mode) {
+    case _ServiceOrderWorkflowMode.invoice:
+      return 'Export Invoice';
+    case _ServiceOrderWorkflowMode.requests:
+      return 'View Order Requests';
+    case _ServiceOrderWorkflowMode.process:
+      return 'Process Order';
+  }
+}
+
+String _workflowSubtitle(_ServiceOrderWorkflowMode mode) {
+  switch (mode) {
+    case _ServiceOrderWorkflowMode.invoice:
+      return 'Receptionist exports invoices for completed service orders.';
+    case _ServiceOrderWorkflowMode.requests:
+      return 'Receptionist views service orders waiting for processing.';
+    case _ServiceOrderWorkflowMode.process:
+      return 'Receptionist starts pending orders and completes in-progress orders.';
+  }
+}
+
+String _workflowEmptyText(_ServiceOrderWorkflowMode mode) {
+  switch (mode) {
+    case _ServiceOrderWorkflowMode.invoice:
+      return 'No completed orders to export invoice yet';
+    case _ServiceOrderWorkflowMode.requests:
+      return 'No pending order requests';
+    case _ServiceOrderWorkflowMode.process:
+      return 'No orders waiting for processing';
+  }
+}
+
+bool _matchesWorkflow(_ServiceOrderWorkflowMode mode, ServiceOrderModel order) {
+  final status = order.status.toUpperCase();
+  switch (mode) {
+    case _ServiceOrderWorkflowMode.invoice:
+      return status == 'COMPLETED';
+    case _ServiceOrderWorkflowMode.requests:
+      return status == 'PENDING';
+    case _ServiceOrderWorkflowMode.process:
+      return status == 'PENDING' || status == 'IN_PROGRESS';
+  }
+}
+
+String _buildInvoiceText(ServiceOrderModel order) {
+  final buffer = StringBuffer()
+    ..writeln('FPT Golden Hotel')
+    ..writeln('SERVICE ORDER INVOICE')
+    ..writeln('Order: ${order.orderId}')
+    ..writeln('Booking: ${order.bookingId}')
+    ..writeln('Guest: ${order.guestName.isEmpty ? 'N/A' : order.guestName}')
+    ..writeln('Phone: ${order.phone.isEmpty ? 'N/A' : order.phone}')
+    ..writeln('Ordered at: ${order.orderedAt}')
+    ..writeln('Status: ${order.status}')
+    ..writeln('')
+    ..writeln('Services:');
+
+  if (order.services.isEmpty) {
+    buffer.writeln('- No service lines');
+  } else {
+    for (final line in order.services) {
+      buffer.writeln(
+        '- ${line.serviceName} x${line.quantity}: '
+        '${_formatMoney(line.lineTotal)}',
+      );
+    }
+  }
+
+  buffer
+    ..writeln('')
+    ..writeln('Total: ${_formatMoney(order.totalAmount)}');
+
+  return buffer.toString();
+}
+
+class _ServiceOrderHeader extends StatelessWidget {
+  const _ServiceOrderHeader({
+    required this.title,
+    required this.subtitle,
+    required this.totalOrders,
+  });
+
+  final String title;
+  final String subtitle;
+  final int totalOrders;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 12),
+          _Badge(label: '$totalOrders orders', color: Colors.orange),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceOrderCard extends StatelessWidget {
+  const _ServiceOrderCard({
+    required this.order,
+    required this.canUpdate,
+    required this.onUpdate,
+  });
+
+  final ServiceOrderModel order;
+  final bool canUpdate;
+  final ValueChanged<String> onUpdate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.guestName.isEmpty ? order.bookingId : order.guestName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _Badge(
+                label: order.status,
+                color: _serviceOrderStatusColor(order.status),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Order: ${order.orderId}'),
+          Text('Booking: ${order.bookingId}'),
+          Text('Phone: ${order.phone}'),
+          Text('Ordered at: ${order.orderedAt}'),
+          Text('Total: ${_formatMoney(order.totalAmount)}'),
+          if (order.services.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...order.services.map(
+              (line) => Text(
+                '${line.serviceName} x${line.quantity} - ${_formatMoney(line.lineTotal)}',
+              ),
+            ),
+          ],
+          if (canUpdate) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  const [
+                    'PENDING',
+                    'IN_PROGRESS',
+                    'COMPLETED',
+                    'CANCELLED',
+                  ].map((status) {
+                    final selected = order.status.toUpperCase() == status;
+                    return ChoiceChip(
+                      label: Text(status),
+                      selected: selected,
+                      onSelected: selected ? null : (_) => onUpdate(status),
+                    );
+                  }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Color _serviceOrderStatusColor(String status) {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED':
+      return Colors.green;
+    case 'CANCELLED':
+      return Colors.red;
+    case 'IN_PROGRESS':
+      return Colors.blue;
+    default:
+      return Colors.orange;
+  }
+}
+
+String _formatMoney(num value) => '${value.toStringAsFixed(0)} VND';
 
 class _StatusFilterChip extends StatelessWidget {
   const _StatusFilterChip({
