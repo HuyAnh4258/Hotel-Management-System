@@ -90,8 +90,8 @@ class _DashboardPageState extends State<DashboardPage>
           'Tạo và quản lý mã giảm giá, khuyến mãi',
           Icons.card_giftcard_outlined,
           const Color(0xFF7C3AED),
-          false,
-          null,
+          true,
+          () => Get.toNamed('/vouchers'),
         ),
         const SizedBox(height: 12),
         _ownerCard(
@@ -181,7 +181,7 @@ class _DashboardPageState extends State<DashboardPage>
             margin: const EdgeInsets.only(right: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -285,7 +285,7 @@ class _DashboardPageState extends State<DashboardPage>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.25),
+              color: AppColors.primary.withValues(alpha: 0.25),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -300,7 +300,7 @@ class _DashboardPageState extends State<DashboardPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -341,10 +341,10 @@ class _DashboardPageState extends State<DashboardPage>
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.2),
+                    color: AppColors.accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.accent.withOpacity(0.4),
+                      color: AppColors.accent.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Obx(
@@ -436,7 +436,7 @@ class _DashboardPageState extends State<DashboardPage>
         border: Border(top: BorderSide(color: color, width: 3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -448,7 +448,7 @@ class _DashboardPageState extends State<DashboardPage>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(icon, size: 20, color: color),
@@ -492,7 +492,7 @@ class _DashboardPageState extends State<DashboardPage>
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.04),
+      shadowColor: Colors.black.withValues(alpha: 0.04),
       child: InkWell(
         onTap: isReady ? onTap : null,
         borderRadius: BorderRadius.circular(16),
@@ -508,7 +508,7 @@ class _DashboardPageState extends State<DashboardPage>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, size: 22, color: color),
@@ -545,8 +545,8 @@ class _DashboardPageState extends State<DashboardPage>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isReady
-                      ? AppColors.success.withOpacity(0.1)
-                      : AppColors.textHint.withOpacity(0.1),
+                      ? AppColors.success.withValues(alpha: 0.1)
+                      : AppColors.textHint.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -603,7 +603,7 @@ class _DashboardPageState extends State<DashboardPage>
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       elevation: 3,
-      shadowColor: m.color.withOpacity(0.15),
+      shadowColor: m.color.withValues(alpha: 0.15),
       child: InkWell(
         onTap: m.isReady ? () => Get.toNamed(m.route) : null,
         borderRadius: BorderRadius.circular(18),
@@ -628,7 +628,7 @@ class _DashboardPageState extends State<DashboardPage>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: m.color.withOpacity(0.1),
+                      color: m.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(m.icon, size: 20, color: m.color),
@@ -641,8 +641,8 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                     decoration: BoxDecoration(
                       color: m.isReady
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.textHint.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.textHint.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -765,14 +765,6 @@ class _DashboardPageState extends State<DashboardPage>
         const Color(0xFF0891B2),
         false,
       ),
-      _Module(
-        'Khuyến mãi',
-        'Voucher & ưu đãi',
-        Icons.card_giftcard_outlined,
-        '/vouchers',
-        const Color(0xFF7C3AED),
-        false,
-      ),
     ];
   }
 
@@ -812,7 +804,7 @@ class _DashboardPageState extends State<DashboardPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.12),
+                    color: AppColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -906,10 +898,12 @@ class _DashboardPageState extends State<DashboardPage>
 
   String _greetingDetail() {
     final h = DateTime.now().hour;
-    if (h < 12)
+    if (h < 12) {
       return 'Buổi sáng là thời điểm lý tưởng để kiểm tra tình trạng phòng và lên kế hoạch.';
-    if (h < 18)
+    }
+    if (h < 18) {
       return 'Tiếp tục giám sát hoạt động và đảm bảo chất lượng dịch vụ trong suốt buổi chiều.';
+    }
     return 'Tổng kết hoạt động trong ngày và chuẩn bị cho ngày mai.';
   }
 

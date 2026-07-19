@@ -131,8 +131,9 @@ class InventoryViewModel extends GetxController {
   Future<void> fetchDeactivatedItems() async {
     isLoading.value = true;
     try {
-      final response =
-          await _dioClient.dio.get(ApiConstants.inventoryDeactivatedItems);
+      final response = await _dioClient.dio.get(
+        ApiConstants.inventoryDeactivatedItems,
+      );
       _deactivatedItems.value = (response.data as List)
           .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -145,8 +146,9 @@ class InventoryViewModel extends GetxController {
   Future<void> fetchAdjustments() async {
     isLoading.value = true;
     try {
-      final response =
-          await _dioClient.dio.get(ApiConstants.allInventoryAdjustments);
+      final response = await _dioClient.dio.get(
+        ApiConstants.allInventoryAdjustments,
+      );
       _adjustments.value = (response.data as List)
           .map((e) => AdjustmentRecord.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -156,7 +158,12 @@ class InventoryViewModel extends GetxController {
     }
   }
 
-  Future<String?> createItem(String name, double cost, int threshold, {String? description}) async {
+  Future<String?> createItem(
+    String name,
+    double cost,
+    int threshold, {
+    String? description,
+  }) async {
     isSubmitting.value = true;
     submitError.value = '';
     try {
@@ -238,8 +245,10 @@ class InventoryViewModel extends GetxController {
 
   Future<String?> setItemPrice(String itemId, double unitPrice) async {
     try {
-      await _dioClient.dio.patch(ApiConstants.inventoryItemPrice(itemId),
-          data: {"unitPrice": unitPrice});
+      await _dioClient.dio.patch(
+        ApiConstants.inventoryItemPrice(itemId),
+        data: {"unitPrice": unitPrice},
+      );
       await fetchItems();
       return null;
     } catch (e) {
@@ -275,12 +284,14 @@ class InventoryViewModel extends GetxController {
   String _extractError(dynamic e) {
     try {
       final data = e.response?.data;
-      if (data is Map && data.containsKey('message'))
+      if (data is Map && data.containsKey('message')) {
         return data['message'] as String;
+      }
     } catch (_) {}
     final s = e.toString();
-    if (s.contains('RuntimeException:'))
+    if (s.contains('RuntimeException:')) {
       return s.split('RuntimeException:').last.trim();
+    }
     return 'Có lỗi xảy ra, vui lòng thử lại';
   }
 }

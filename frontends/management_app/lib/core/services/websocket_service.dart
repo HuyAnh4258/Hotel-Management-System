@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
@@ -18,8 +17,10 @@ class WebSocketService extends GetxService {
       config: StompConfig(
         url: 'ws://localhost:8080/ws',
         onConnect: _onConnect,
-        onWebSocketError: (dynamic e) => print('WebSocket connection error: $e'),
-        onStompError: (StompFrame frame) => print('STOMP protocol error: ${frame.body}'),
+        onWebSocketError: (dynamic e) =>
+            print('WebSocket connection error: $e'),
+        onStompError: (StompFrame frame) =>
+            print('STOMP protocol error: ${frame.body}'),
         onDisconnect: (frame) => print('WebSocket disconnected'),
         reconnectDelay: const Duration(seconds: 5),
       ),
