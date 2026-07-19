@@ -21,6 +21,9 @@ public class InventoryItem {
     @Column(name = "ItemName", length = 100, nullable = false, unique = true)
     private String itemName;
 
+    @Column(name = "Description", length = 500)
+    private String description;
+
     @Column(name = "StockQuantity", nullable = false)
     @Builder.Default
     private Integer stockQuantity = 0;

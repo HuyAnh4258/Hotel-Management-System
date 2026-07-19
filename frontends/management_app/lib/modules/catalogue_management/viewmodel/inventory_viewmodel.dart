@@ -5,6 +5,7 @@ import 'package:hms_shared/network/dio_client.dart';
 class InventoryItem {
   final String itemId;
   final String itemName;
+  final String? description;
   final int stockQuantity;
   final double unitCost;
   final double? unitPrice;
@@ -16,6 +17,7 @@ class InventoryItem {
   InventoryItem({
     required this.itemId,
     required this.itemName,
+    this.description,
     required this.stockQuantity,
     required this.unitCost,
     required this.lowStockThreshold,
@@ -30,6 +32,7 @@ class InventoryItem {
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
     itemId: json['itemId'] as String? ?? '',
     itemName: json['itemName'] as String? ?? '',
+    description: json['description'] as String?,
     stockQuantity: json['stockQuantity'] as int? ?? 0,
     unitCost: (json['unitCost'] as num?)?.toDouble() ?? 0,
     unitPrice: (json['unitPrice'] as num?)?.toDouble(),
@@ -39,10 +42,49 @@ class InventoryItem {
   );
 }
 
+class AdjustmentRecord {
+  final String adjustmentId;
+  final String itemId;
+  final String itemName;
+  final String employeeId;
+  final String employeeName;
+  final int quantity;
+  final String type;
+  final String? description;
+  final String? createdAt;
+
+  AdjustmentRecord({
+    required this.adjustmentId,
+    required this.itemId,
+    required this.itemName,
+    required this.employeeId,
+    required this.employeeName,
+    required this.quantity,
+    required this.type,
+    this.description,
+    this.createdAt,
+  });
+
+  factory AdjustmentRecord.fromJson(Map<String, dynamic> json) =>
+      AdjustmentRecord(
+        adjustmentId: json['adjustmentId'] as String? ?? '',
+        itemId: json['itemId'] as String? ?? '',
+        itemName: json['itemName'] as String? ?? '',
+        employeeId: json['employeeId'] as String? ?? '',
+        employeeName: json['employeeName'] as String? ?? '',
+        quantity: json['quantity'] as int? ?? 0,
+        type: json['type'] as String? ?? '',
+        description: json['description'] as String?,
+        createdAt: json['createdAt'] as String?,
+      );
+}
+
 class InventoryViewModel extends GetxController {
   final DioClient _dioClient;
 
   final RxList<InventoryItem> _items = <InventoryItem>[].obs;
+  final RxList<InventoryItem> _deactivatedItems = <InventoryItem>[].obs;
+  final RxList<AdjustmentRecord> _adjustments = <AdjustmentRecord>[].obs;
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;
   final RxInt selectedTab = 0.obs;
@@ -58,6 +100,9 @@ class InventoryViewModel extends GetxController {
     final q = searchQuery.value.toLowerCase();
     return _items.where((i) => i.itemName.toLowerCase().contains(q)).toList();
   }
+
+  List<InventoryItem> get deactivatedItems => _deactivatedItems;
+  List<AdjustmentRecord> get adjustments => _adjustments;
 
   int get totalItems => _items.length;
   int get lowStockCount => _items.where((i) => i.isLow).length;
@@ -83,13 +128,46 @@ class InventoryViewModel extends GetxController {
     }
   }
 
-  Future<String?> createItem(String name, double cost, int threshold) async {
+  Future<void> fetchDeactivatedItems() async {
+    isLoading.value = true;
+    try {
+      final response =
+          await _dioClient.dio.get(ApiConstants.inventoryDeactivatedItems);
+      _deactivatedItems.value = (response.data as List)
+          .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchAdjustments() async {
+    isLoading.value = true;
+    try {
+      final response =
+          await _dioClient.dio.get(ApiConstants.allInventoryAdjustments);
+      _adjustments.value = (response.data as List)
+          .map((e) => AdjustmentRecord.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<String?> createItem(String name, double cost, int threshold, {String? description}) async {
     isSubmitting.value = true;
     submitError.value = '';
     try {
       await _dioClient.dio.post(
         ApiConstants.inventoryItems,
-        data: {'itemName': name, 'unitCost': cost, 'threshold': threshold},
+        data: {
+          'itemName': name,
+          'unitCost': cost,
+          'threshold': threshold,
+          'description': description ?? '',
+        },
       );
       await fetchItems();
       return null;
@@ -105,14 +183,20 @@ class InventoryViewModel extends GetxController {
     String id,
     String name,
     double cost,
-    int threshold,
-  ) async {
+    int threshold, {
+    String? description,
+  }) async {
     isSubmitting.value = true;
     submitError.value = '';
     try {
       await _dioClient.dio.put(
         ApiConstants.inventoryItemById(id),
-        data: {'itemName': name, 'unitCost': cost, 'threshold': threshold},
+        data: {
+          'itemName': name,
+          'unitCost': cost,
+          'threshold': threshold,
+          'description': description ?? '',
+        },
       );
       await fetchItems();
       return null;
@@ -152,20 +236,32 @@ class InventoryViewModel extends GetxController {
     }
   }
 
-
   Future<String?> setItemPrice(String itemId, double unitPrice) async {
     try {
-      await _dioClient.dio.patch(ApiConstants.inventoryItemPrice(itemId), data: {"unitPrice": unitPrice});
+      await _dioClient.dio.patch(ApiConstants.inventoryItemPrice(itemId),
+          data: {"unitPrice": unitPrice});
       await fetchItems();
       return null;
     } catch (e) {
       return _extractError(e);
     }
   }
+
   Future<String?> deactivateItem(String id) async {
     try {
       await _dioClient.dio.patch(ApiConstants.inventoryItemDeactivate(id));
       await fetchItems();
+      return null;
+    } catch (e) {
+      return _extractError(e);
+    }
+  }
+
+  Future<String?> reactivateItem(String id) async {
+    try {
+      await _dioClient.dio.patch(ApiConstants.inventoryItemReactivate(id));
+      await fetchItems();
+      await fetchDeactivatedItems();
       return null;
     } catch (e) {
       return _extractError(e);

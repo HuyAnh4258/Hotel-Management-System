@@ -13,4 +13,6 @@ public interface IInventoryAdjustmentRepository extends JpaRepository<InventoryA
             String type, LocalDateTime from, LocalDateTime to);
 
     List<InventoryAdjustment> findByEmployee_UserId(String employeeId);
+
+    List<InventoryAdjustment> findAllByOrderByCreatedAtDesc();
 }

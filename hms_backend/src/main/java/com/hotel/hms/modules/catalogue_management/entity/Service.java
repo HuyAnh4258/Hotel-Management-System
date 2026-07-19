@@ -27,6 +27,10 @@ public class Service {
     @Column(name = "UnitPrice", precision = 18, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 
+    @Column(name = "IsComposite", nullable = false)
+    @Builder.Default
+    private Boolean isComposite = false;
+
     @Column(name = "IsActive", nullable = false)
     @Builder.Default
     private Boolean isActive = true;

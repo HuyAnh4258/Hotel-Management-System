@@ -21,8 +21,12 @@ class ApiConstants {
   static String inventoryItemPrice(String id) => '/inventory/items/$id/unit-price';
   static String inventoryItemDeactivate(String id) =>
       '/inventory/items/$id/deactivate';
+  static String inventoryItemReactivate(String id) =>
+      '/inventory/items/$id/reactivate';
   static String inventoryItemHistory(String id) =>
       '/inventory/items/$id/history';
+  static const String inventoryDeactivatedItems = '/inventory/items/deactivated';
+  static const String allInventoryAdjustments = '/inventory/adjustments';
   static const String services = '/services';
   static String serviceById(String id) => '/services/$id';
   static String servicePrice(String id) => '/services/$id/unit-price';

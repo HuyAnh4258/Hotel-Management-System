@@ -1,23 +1,21 @@
 package com.hotel.hms.modules.catalogue_management.dto;
 
 import lombok.*;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryCatalogueResponseDTO {
+public class InventoryAdjustmentResponseDTO {
 
+    private String adjustmentId;
     private String itemId;
     private String itemName;
+    private String employeeId;
+    private String employeeName;
+    private Integer quantity;
+    private String type;
     private String description;
-    private Integer stockQuantity;
-    private BigDecimal unitCost;
-    private BigDecimal unitPrice;
-    private Integer lowStockThreshold;
-    private Boolean isActive;
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

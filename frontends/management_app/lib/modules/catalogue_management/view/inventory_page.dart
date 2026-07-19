@@ -18,6 +18,20 @@ class _InventoryPageState extends State<InventoryPage>
   late final Animation<double> _fade;
 
   final _searchCtrl = TextEditingController();
+  String _selectedFilter = 'ALL';
+
+  final List<Map<String, String>> _filters = const [
+    {'value': 'ALL', 'label': 'Tất cả'},
+    {'value': 'RESTOCK', 'label': 'Nhập kho'},
+    {'value': 'CONSUME', 'label': 'Xuất kho'},
+    {'value': 'DAMAGE', 'label': 'Báo hỏng'},
+    {'value': 'RECONCILE', 'label': 'Kiểm kê'},
+    {'value': 'LOSS', 'label': 'Thất thoát'},
+    {'value': 'AUTO_SELL', 'label': 'Bán tự động'},
+    {'value': 'UPDATE', 'label': 'Cập nhật'},
+    {'value': 'DEACTIVATE', 'label': 'Vô hiệu hóa'},
+    {'value': 'REACTIVATE', 'label': 'Khôi phục'},
+  ];
 
   @override
   void initState() {
@@ -45,12 +59,16 @@ class _InventoryPageState extends State<InventoryPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Kho & Chi phí'),
+        title: const Text('Kho & Vật tư'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, size: 22),
             tooltip: 'Làm mới',
-            onPressed: () => vm.fetchItems(),
+            onPressed: () {
+              vm.fetchItems();
+              vm.fetchAdjustments();
+              vm.fetchDeactivatedItems();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, size: 24),
@@ -184,23 +202,28 @@ class _InventoryPageState extends State<InventoryPage>
       child: Obx(
         () => Row(
           children: [
-            _tab('Tồn kho', 0, vm),
-            const SizedBox(width: 4),
-            _tab('Điều chỉnh', 1, vm),
-            const SizedBox(width: 4),
-            _tab('Báo cáo', 2, vm),
+            _tab(Icons.inventory_2_outlined, 'Tồn kho', 0, vm),
+            const SizedBox(width: 6),
+            _tab(Icons.history_rounded, 'Lịch sử', 1, vm),
+            const SizedBox(width: 6),
+            _tab(Icons.restore_rounded, 'Khôi phục', 2, vm),
           ],
         ),
       ),
     );
   }
 
-  Widget _tab(String label, int index, InventoryViewModel vm) {
+  Widget _tab(IconData icon, String label, int index, InventoryViewModel vm) {
     final active = vm.selectedTab.value == index;
     return GestureDetector(
-      onTap: () => vm.selectedTab.value = index,
+      onTap: () {
+        vm.selectedTab.value = index;
+        if (index == 1) vm.fetchAdjustments();
+        if (index == 2) vm.fetchDeactivatedItems();
+      },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           color: active ? AppColors.primary : AppColors.surface,
@@ -208,14 +231,34 @@ class _InventoryPageState extends State<InventoryPage>
           border: Border.all(
             color: active ? AppColors.primary : AppColors.border,
           ),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: active ? Colors.white : AppColors.textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: active ? Colors.white : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: active ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -224,55 +267,61 @@ class _InventoryPageState extends State<InventoryPage>
   // ─── Search ───────────────────────────────────────────────────
 
   Widget _buildSearchBar(InventoryViewModel vm) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: vm.onSearchChanged,
-              style: const TextStyle(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: "Tìm vật tư...",
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: vm.searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          vm.clearSearch();
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+    return Obx(() {
+      if (vm.selectedTab.value != 0) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: vm.onSearchChanged,
+                style: const TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: "Tìm vật tư...",
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: vm.searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            vm.clearSearch();
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Obx(
-            () => IconButton(
-              icon: Icon(
-                vm.isGridView.value ? Icons.list : Icons.grid_view_rounded,
-                size: 22,
-                color: AppColors.textSecondary,
+            const SizedBox(width: 8),
+            Obx(
+              () => IconButton(
+                icon: Icon(
+                  vm.isGridView.value ? Icons.list : Icons.grid_view_rounded,
+                  size: 22,
+                  color: AppColors.textSecondary,
+                ),
+                tooltip: vm.isGridView.value
+                    ? "Xem dạng danh sách"
+                    : "Xem dạng lưới",
+                onPressed: vm.toggleView,
               ),
-              tooltip: vm.isGridView.value
-                  ? "Xem dạng danh sách"
-                  : "Xem dạng lưới",
-              onPressed: vm.toggleView,
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   // ─── Tab content ──────────────────────────────────────────────
 
   Widget _buildTabContent(InventoryViewModel vm) {
     return Obx(() {
-      if (vm.isLoading.value && vm.filteredItems.isEmpty) {
+      if (vm.isLoading.value &&
+          vm.filteredItems.isEmpty &&
+          vm.adjustments.isEmpty &&
+          vm.deactivatedItems.isEmpty) {
         return const Center(
           child: CircularProgressIndicator(color: AppColors.accent),
         );
@@ -284,7 +333,7 @@ class _InventoryPageState extends State<InventoryPage>
         case 1:
           return _buildAdjustmentTab(vm);
         case 2:
-          return _buildReportTab(vm);
+          return _buildRestoreTab(vm);
         default:
           return const SizedBox();
       }
@@ -295,27 +344,10 @@ class _InventoryPageState extends State<InventoryPage>
 
   Widget _buildStockTab(InventoryViewModel vm) {
     if (vm.filteredItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 56,
-              color: AppColors.textHint.withOpacity(0.5),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Không có vật tư nào",
-              style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Nhấn + để thêm mới",
-              style: TextStyle(fontSize: 13, color: AppColors.textHint),
-            ),
-          ],
-        ),
+      return _buildEmptyState(
+        icon: Icons.inventory_2_outlined,
+        title: "Không có vật tư nào",
+        subtitle: "Nhấn + để thêm mới",
       );
     }
 
@@ -378,7 +410,19 @@ class _InventoryPageState extends State<InventoryPage>
               Row(children: [
                 Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(11)), child: Icon(Icons.inventory_2, size: 22, color: color)),
                 const SizedBox(width: 12),
-                Expanded(child: Text(item.itemName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.itemName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                      if (item.description != null && item.description!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(item.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Text("${item.stockQuantity}/${item.lowStockThreshold}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color)),
                 const SizedBox(width: 6),
@@ -392,7 +436,7 @@ class _InventoryPageState extends State<InventoryPage>
                 const SizedBox(width: 16),
                 _infoChip(Icons.sell_outlined, "Giá bán", item.isPriced ? "${_fmt(item.unitPrice!)}đ" : "Chưa đặt", item.isPriced ? AppColors.accent : AppColors.textHint),
                 const Spacer(),
-                if (item.isPriced) StatusChip(label: "ĐÃ BÁN", color: AppColors.accent) else StatusChip(label: "CHƯA BÁN", color: AppColors.textHint),
+                if (item.isPriced) StatusChip(label: "SẴN BÁN", color: AppColors.success) else StatusChip(label: "CHƯA BÁN", color: AppColors.textHint),
               ]),
             ]),
           ),
@@ -465,6 +509,13 @@ class _InventoryPageState extends State<InventoryPage>
                             : AppColors.textPrimary,
                       ),
                     ),
+                    if (item.description != null && item.description!.isNotEmpty)
+                      Text(
+                        item.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                      ),
                     const SizedBox(height: 3),
                     Text(
                       _fmt(item.unitCost),
@@ -485,167 +536,176 @@ class _InventoryPageState extends State<InventoryPage>
 
   void _showItemActions(InventoryItem item, InventoryViewModel vm) {
     Get.bottomSheet(
-      DraggableScrollableSheet(
-        initialChildSize: 0.52,
-        minChildSize: 0.35,
-        maxChildSize: 0.7,
-        expand: false,
-        builder: (_, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: ListView(
-            controller: scrollController,
+      Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.inventory_2,
-                      size: 26,
-                      color: AppColors.primary,
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.itemName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.inventory_2,
+                        size: 26,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.itemName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Tồn: ${item.stockQuantity}  |  Ngưỡng: ${item.lowStockThreshold}  |  ${_fmt(item.totalValue)}đ",
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
+                          if (item.description != null && item.description!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.description!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.textHint,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            "Tồn kho: ${item.stockQuantity}  |  Ngưỡng cảnh báo: ${item.lowStockThreshold}  |  Tổng giá trị: ${_fmt(item.totalValue)}đ",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (item.isLow)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: StatusChip(
+                      label: "Dưới ngưỡng tồn kho — cần nhập thêm",
+                      color: AppColors.danger,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (item.isLow)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: StatusChip(
-                    label: "Dưới ngưỡng tồn kho — cần nhập thêm",
-                    color: AppColors.danger,
+                const SizedBox(height: 20),
+                const Text(
+                  "Điều chỉnh kho",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHint,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              const SizedBox(height: 20),
-              const Text(
-                "Điều chỉnh kho",
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textHint,
-                  letterSpacing: 0.5,
+                const SizedBox(height: 8),
+                _actionRow(
+                  Icons.add_circle_outline,
+                  "Nhập kho",
+                  "Tăng số lượng khi nhập thêm hàng mới vào kho",
+                  AppColors.success,
+                  () {
+                    Get.back();
+                    _showAdjustDialog(vm, item, "RESTOCK");
+                  },
                 ),
-              ),
-              const SizedBox(height: 8),
-              _actionRow(
-                Icons.add_circle_outline,
-                "Nhập kho (RESTOCK)",
-                AppColors.success,
-                () {
-                  Get.back();
-                  _showAdjustDialog(vm, item, "RESTOCK");
-                },
-              ),
-              _actionRow(
-                Icons.remove_circle_outline,
-                "Xuất kho (CONSUME)",
-                AppColors.warning,
-                () {
-                  Get.back();
-                  _showAdjustDialog(vm, item, "CONSUME");
-                },
-              ),
-              _actionRow(
-                Icons.broken_image_outlined,
-                "Báo hỏng (DAMAGE)",
-                const Color(0xFFF97316),
-                () {
-                  Get.back();
-                  _showAdjustDialog(vm, item, "DAMAGE");
-                },
-              ),
-              _actionRow(
-                Icons.balance_outlined,
-                "Kiểm kê (RECONCILE)",
-                AppColors.info,
-                () {
-                  Get.back();
-                  _showAdjustDialog(vm, item, "RECONCILE");
-                },
-              ),
-              _actionRow(
-                Icons.report_problem_outlined,
-                "Thất thoát (LOSS)",
-                const Color(0xFFDC2626),
-                () {
-                  Get.back();
-                  _showAdjustDialog(vm, item, "LOSS");
-                },
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Quản lý",
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textHint,
-                  letterSpacing: 0.5,
+                _actionRow(
+                  Icons.broken_image_outlined,
+                  "Báo hỏng",
+                  "Ghi nhận và giảm trừ số lượng vật tư bị hư hỏng",
+                  const Color(0xFFF97316),
+                  () {
+                    Get.back();
+                    _showAdjustDialog(vm, item, "DAMAGE");
+                  },
                 ),
-              ),
-              const SizedBox(height: 8),
-              _actionRow(
-                Icons.edit_outlined,
-                "Sửa thông tin",
-                AppColors.info,
-                () {
-                  Get.back();
-                  _showItemDialog(vm, existing: item);
-                },
-              ),
-              _actionRow(
-                Icons.delete_outline,
-                "Vô hiệu hoá",
-                AppColors.danger,
-                () {
-                  Get.back();
-                  _confirmDeactivate(vm, item);
-                },
-              ),
-            ],
+                _actionRow(
+                  Icons.balance_outlined,
+                  "Kiểm kê kho",
+                  "Cập nhật tồn kho theo số lượng thực tế đếm được",
+                  AppColors.info,
+                  () {
+                    Get.back();
+                    _showAdjustDialog(vm, item, "RECONCILE");
+                  },
+                ),
+                _actionRow(
+                  Icons.report_problem_outlined,
+                  "Báo thất thoát",
+                  "Ghi nhận hao hụt, mất mát vật tư không rõ nguyên nhân",
+                  const Color(0xFFDC2626),
+                  () {
+                    Get.back();
+                    _showAdjustDialog(vm, item, "LOSS");
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Quản lý",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHint,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _actionRow(
+                  Icons.edit_outlined,
+                  "Sửa thông tin",
+                  "Thay đổi tên vật tư, giá nhập lẻ hoặc ngưỡng cảnh báo",
+                  AppColors.info,
+                  () {
+                    Get.back();
+                    _showItemDialog(vm, existing: item);
+                  },
+                ),
+                _actionRow(
+                  Icons.delete_outline,
+                  "Vô hiệu hoá",
+                  "Tạm ngừng sử dụng vật tư này (có thể khôi phục sau)",
+                  AppColors.danger,
+                  () {
+                    Get.back();
+                    _confirmDeactivate(vm, item);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -657,6 +717,7 @@ class _InventoryPageState extends State<InventoryPage>
   Widget _actionRow(
     IconData icon,
     String label,
+    String subtitle,
     Color color,
     VoidCallback onTap,
   ) {
@@ -677,7 +738,14 @@ class _InventoryPageState extends State<InventoryPage>
           ),
           title: Text(
             label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              subtitle,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
           ),
           trailing: const Icon(
             Icons.chevron_right,
@@ -688,61 +756,429 @@ class _InventoryPageState extends State<InventoryPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         ),
       ),
     );
   }
 
-  // ─── Tab 1: Adjustment history (placeholder) ──────────────────
+  // ─── Tab 1: Adjustment history ────────────────────────────────
 
   Widget _buildAdjustmentTab(InventoryViewModel vm) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.history,
-            size: 48,
-            color: AppColors.textHint.withOpacity(0.4),
+    final list = _selectedFilter == 'ALL'
+        ? vm.adjustments
+        : vm.adjustments.where((a) => a.type == _selectedFilter).toList();
+
+    return Column(
+      children: [
+        // Horizontal scrollable filter chips
+        SizedBox(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: _filters.length,
+            itemBuilder: (context, i) {
+              final filter = _filters[i];
+              final isSelected = _selectedFilter == filter['value'];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(
+                    filter['label']!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: AppColors.primary,
+                  checkmarkColor: Colors.white,
+                  backgroundColor: AppColors.surface,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedFilter = filter['value']!;
+                    });
+                  },
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Lịch sử điều chỉnh',
-            style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Tính năng đang phát triển',
-            style: TextStyle(fontSize: 13, color: AppColors.textHint),
-          ),
-        ],
+        ),
+        Expanded(
+          child: list.isEmpty
+              ? _buildEmptyState(
+                  icon: Icons.history_rounded,
+                  title: 'Không có dữ liệu',
+                  subtitle: 'Không tìm thấy lịch sử phù hợp',
+                )
+              : RefreshIndicator(
+                  color: AppColors.accent,
+                  onRefresh: vm.fetchAdjustments,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: list.length,
+                    itemBuilder: (_, i) => _buildAdjustmentCard(list[i]),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdjustmentCard(AdjustmentRecord adj) {
+    final typeInfo = _adjustmentTypeInfo(adj.type);
+    final isPositive = adj.quantity > 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header with type indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: typeInfo.color.withOpacity(0.04),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: typeInfo.color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(typeInfo.icon, size: 20, color: typeInfo.color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          typeInfo.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: typeInfo.color,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          adj.itemName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (adj.quantity != 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (isPositive ? AppColors.success : AppColors.danger)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${isPositive ? "+" : ""}${adj.quantity}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color:
+                              isPositive ? AppColors.success : AppColors.danger,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Details
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              child: Row(
+                children: [
+                  Icon(Icons.person_outline,
+                      size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 4),
+                  Text(
+                    adj.employeeName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.schedule, size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDateTime(adj.createdAt),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  if (adj.description != null &&
+                      adj.description!.isNotEmpty) ...[
+                    const Spacer(),
+                    Flexible(
+                      child: Text(
+                        adj.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ─── Tab 2: Report (placeholder) ──────────────────────────────
+  _AdjustmentTypeInfo _adjustmentTypeInfo(String type) {
+    switch (type) {
+      case 'RESTOCK':
+        return _AdjustmentTypeInfo(
+            'Nhập kho', Icons.add_circle_outline, AppColors.success);
+      case 'CONSUME':
+        return _AdjustmentTypeInfo(
+            'Xuất kho', Icons.remove_circle_outline, AppColors.warning);
+      case 'DAMAGE':
+        return _AdjustmentTypeInfo(
+            'Báo hỏng', Icons.broken_image_outlined, const Color(0xFFF97316));
+      case 'RECONCILE':
+        return _AdjustmentTypeInfo(
+            'Kiểm kê', Icons.balance_outlined, AppColors.info);
+      case 'LOSS':
+        return _AdjustmentTypeInfo(
+            'Thất thoát', Icons.report_problem_outlined, const Color(0xFFDC2626));
+      case 'AUTO_SELL':
+        return _AdjustmentTypeInfo(
+            'Bán tự động', Icons.point_of_sale, AppColors.accent);
+      case 'UPDATE':
+        return _AdjustmentTypeInfo(
+            'Cập nhật', Icons.edit_note_rounded, AppColors.info);
+      case 'DEACTIVATE':
+        return _AdjustmentTypeInfo(
+            'Vô hiệu hóa', Icons.delete_outline_rounded, const Color(0xFFEF4444));
+      case 'REACTIVATE':
+        return _AdjustmentTypeInfo(
+            'Khôi phục', Icons.settings_backup_restore_rounded, AppColors.success);
+      default:
+        return _AdjustmentTypeInfo(
+            type, Icons.swap_vert, AppColors.textSecondary);
+    }
+  }
 
-  Widget _buildReportTab(InventoryViewModel vm) {
+  // ─── Tab 2: Restore deactivated items ─────────────────────────
+
+  Widget _buildRestoreTab(InventoryViewModel vm) {
+    if (vm.deactivatedItems.isEmpty && !vm.isLoading.value) {
+      return _buildEmptyState(
+        icon: Icons.check_circle_outline,
+        title: 'Không có vật tư nào bị vô hiệu',
+        subtitle: 'Tất cả vật tư đều đang hoạt động',
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.accent,
+      onRefresh: vm.fetchDeactivatedItems,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: vm.deactivatedItems.length,
+        itemBuilder: (_, i) =>
+            _buildDeactivatedItemCard(vm.deactivatedItems[i], vm),
+      ),
+    );
+  }
+
+  Widget _buildDeactivatedItemCard(InventoryItem item, InventoryViewModel vm) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border(
+            left: BorderSide(
+              color: AppColors.textHint.withOpacity(0.4),
+              width: 4,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.textHint.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 22,
+                  color: AppColors.textHint,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.itemName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        decoration: TextDecoration.lineThrough,
+                        decorationColor: AppColors.textHint,
+                      ),
+                    ),
+                    if (item.description != null && item.description!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(item.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textHint, fontStyle: FontStyle.italic)),
+                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          'Tồn: ${item.stockQuantity}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Giá nhập: ${_fmt(item.unitCost)}đ',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Material(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: () => _confirmReactivate(vm, item),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.restore, size: 18, color: AppColors.success),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Khôi phục',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Empty state ──────────────────────────────────────────────
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.analytics_outlined,
-            size: 48,
-            color: AppColors.textHint.withOpacity(0.4),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(
+              icon,
+              size: 40,
+              color: AppColors.textHint.withOpacity(0.5),
+            ),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Báo cáo chi phí',
-            style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Tính năng đang phát triển',
-            style: TextStyle(fontSize: 13, color: AppColors.textHint),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: AppColors.textHint),
           ),
         ],
       ),
@@ -753,6 +1189,7 @@ class _InventoryPageState extends State<InventoryPage>
 
   void _showItemDialog(InventoryViewModel vm, {InventoryItem? existing}) {
     final nameCtrl = TextEditingController(text: existing?.itemName ?? '');
+    final descCtrl = TextEditingController(text: existing?.description ?? '');
     final costCtrl = TextEditingController(
       text: existing != null ? _fmt(existing.unitCost) : '',
     );
@@ -813,6 +1250,15 @@ class _InventoryPageState extends State<InventoryPage>
                       hintText: 'VD: Xà phòng, Nước suối...',
                     ),
                     validator: (v) => v!.trim().isEmpty ? 'Nhập tên' : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Mô tả vật tư',
+                      hintText: 'VD: Đóng hộp 24 lon, dùng cho minibar...',
+                    ),
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -886,6 +1332,7 @@ class _InventoryPageState extends State<InventoryPage>
                                                   thresholdCtrl.text.trim(),
                                                 ) ??
                                                 5,
+                                            description: descCtrl.text.trim(),
                                           )
                                         : await vm.createItem(
                                             nameCtrl.text.trim(),
@@ -898,6 +1345,7 @@ class _InventoryPageState extends State<InventoryPage>
                                                   thresholdCtrl.text.trim(),
                                                 ) ??
                                                 5,
+                                            description: descCtrl.text.trim(),
                                           );
                                     if (err == null) {
                                       if (isEdit) {
@@ -905,6 +1353,7 @@ class _InventoryPageState extends State<InventoryPage>
                                         Get.snackbar("Thành công", "Đã cập nhật vật tư", snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.success, colorText: Colors.white, duration: const Duration(seconds: 2));
                                       } else {
                                         nameCtrl.clear();
+                                        descCtrl.clear();
                                         costCtrl.clear();
                                         thresholdCtrl.clear();
                                         formKey.currentState?.reset();
@@ -1180,7 +1629,133 @@ class _InventoryPageState extends State<InventoryPage>
     );
   }
 
-  // ─── Format ───────────────────────────────────────────────────
+  void _confirmReactivate(InventoryViewModel vm, InventoryItem item) {
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.restore,
+                    color: AppColors.success,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Khôi phục vật tư',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Kích hoạt lại "${item.itemName}"?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Huỷ'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Get.back();
+                          final err = await vm.reactivateItem(item.itemId);
+                          if (err == null) {
+                            Get.snackbar(
+                              "Thành công",
+                              "Đã khôi phục \"${item.itemName}\"",
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.success,
+                              colorText: Colors.white,
+                              duration: const Duration(seconds: 2),
+                            );
+                          } else {
+                            Get.snackbar(
+                              "Lỗi",
+                              err,
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.danger,
+                              colorText: Colors.white,
+                              duration: const Duration(seconds: 3),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Khôi phục',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────
+
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null || dateTimeStr.isEmpty) return '—';
+    try {
+      final dt = DateTime.parse(dateTimeStr);
+      return '${dt.day.toString().padLeft(2, '0')}/'
+          '${dt.month.toString().padLeft(2, '0')}/'
+          '${dt.year} '
+          '${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return dateTimeStr;
+    }
+  }
 
   String _fmt(double value) {
     final parts = value.toStringAsFixed(0).split(".");
@@ -1192,6 +1767,13 @@ class _InventoryPageState extends State<InventoryPage>
     }
     return buf.toString();
   }
+}
+
+class _AdjustmentTypeInfo {
+  final String label;
+  final IconData icon;
+  final Color color;
+  _AdjustmentTypeInfo(this.label, this.icon, this.color);
 }
 
 class _ThousandsFormatter extends TextInputFormatter {

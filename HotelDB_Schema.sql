@@ -317,6 +317,7 @@ CREATE TABLE Feedback (
 CREATE TABLE InventoryItem (
     ItemId            VARCHAR(12)   NOT NULL COMMENT 'INV-00000001',
     ItemName          VARCHAR(100)  NOT NULL,
+    Description       VARCHAR(500)  NULL,
     StockQuantity     INT           NOT NULL DEFAULT 0,
     UnitCost          DECIMAL(18,2) NOT NULL COMMENT 'Giá vốn nhập kho',
     UnitPrice   DECIMAL(18,2) NULL     COMMENT 'Giá bán (Owner đặt)',
@@ -382,6 +383,7 @@ CREATE TABLE Service (
     ServiceName VARCHAR(100)  NOT NULL,
     Description VARCHAR(500)  NULL,
     UnitPrice   DECIMAL(18,2) NOT NULL COMMENT 'Giá bán cho khách',
+    IsComposite BIT           NOT NULL DEFAULT 0,
     IsActive    BIT           NOT NULL DEFAULT 1,
     CreatedAt   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt   DATETIME      NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

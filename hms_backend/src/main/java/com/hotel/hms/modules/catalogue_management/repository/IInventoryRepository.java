@@ -18,4 +18,6 @@ public interface IInventoryRepository extends JpaRepository<InventoryItem, Strin
     Optional<InventoryItem> findByItemName(String itemName);
 
     boolean existsByItemName(String itemName);
+
+    List<InventoryItem> findByIsActiveFalse();
 }

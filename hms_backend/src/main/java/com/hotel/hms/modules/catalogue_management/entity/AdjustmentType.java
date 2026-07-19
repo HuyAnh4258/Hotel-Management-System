@@ -6,5 +6,8 @@ public enum AdjustmentType {
     DAMAGE,
     RECONCILE,
     LOSS,
-    AUTO_SELL
+    AUTO_SELL,
+    UPDATE,
+    DEACTIVATE,
+    REACTIVATE
 }

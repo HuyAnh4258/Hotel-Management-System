@@ -13,11 +13,11 @@ public interface IInventoryService {
 
     InventoryCatalogueResponseDTO getItemById(String id);
 
-    InventoryCatalogueResponseDTO updateItemDetails(String id, InventoryCatalogueRequestDTO request);
+    InventoryCatalogueResponseDTO updateItemDetails(String id, InventoryCatalogueRequestDTO request, String employeeId);
 
-    void deactivateItem(String id);
+    void deactivateItem(String id, String employeeId);
 
-    InventoryCatalogueResponseDTO updateItemPrice(String id, BigDecimal unitPrice);
+    InventoryCatalogueResponseDTO updateItemPrice(String id, BigDecimal unitPrice, String employeeId);
 
     InventoryCatalogueResponseDTO processInventoryAdjustment(InventoryAdjustmentRequestDTO request, String employeeId);
 
@@ -26,4 +26,10 @@ public interface IInventoryService {
     List<?> getItemAdjustmentHistory(String itemId);
 
     List<?> getExpenseReport(LocalDateTime fromDate, LocalDateTime toDate);
+
+    List<InventoryCatalogueResponseDTO> getDeactivatedItems();
+
+    void reactivateItem(String id, String employeeId);
+
+    List<InventoryAdjustmentResponseDTO> getAllAdjustments();
 }

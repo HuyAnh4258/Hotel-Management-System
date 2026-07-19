@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,7 +40,7 @@ public class InventoryController {
     }
 
     @PostMapping("/items")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<InventoryCatalogueResponseDTO> createItem(
             @Valid @RequestBody InventoryCatalogueRequestDTO request,
             @AuthenticationPrincipal UserDetails user) {
@@ -48,24 +49,30 @@ public class InventoryController {
     }
 
     @PutMapping("/items/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<InventoryCatalogueResponseDTO> updateItem(
             @PathVariable("id") String id,
-            @Valid @RequestBody InventoryCatalogueRequestDTO request) {
-        return ResponseEntity.ok(inventoryService.updateItemDetails(id, request));
+            @Valid @RequestBody InventoryCatalogueRequestDTO request,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(inventoryService.updateItemDetails(id, request, user.getUsername()));
     }
 
     @PatchMapping("/items/{id}/deactivate")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<Void> deactivateItem(@PathVariable("id") String id) {
-        inventoryService.deactivateItem(id);
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<Void> deactivateItem(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal UserDetails user) {
+        inventoryService.deactivateItem(id, user.getUsername());
+        return ResponseEntity.noContent().build();
+    }
 
     @PatchMapping("/items/{id}/unit-price")
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<InventoryCatalogueResponseDTO> updateItemPrice(@PathVariable("id") String id, @RequestBody Map<String, BigDecimal> body) {
-        return ResponseEntity.ok(inventoryService.updateItemPrice(id, body.get("unitPrice")));
-    }
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<InventoryCatalogueResponseDTO> updateItemPrice(
+            @PathVariable("id") String id,
+            @RequestBody Map<String, BigDecimal> body,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(inventoryService.updateItemPrice(id, body.get("unitPrice"), user.getUsername()));
     }
 
     // ── ADJUSTMENT (RBAC enforced per type) ─────────────────────
@@ -126,5 +133,30 @@ public class InventoryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
         return ResponseEntity.ok(inventoryService.getExpenseReport(fromDate, toDate));
+    }
+
+    // ── DEACTIVATED ITEMS & REACTIVATION ────────────────────────
+
+    @GetMapping("/items/deactivated")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<InventoryCatalogueResponseDTO>> getDeactivatedItems() {
+        return ResponseEntity.ok(inventoryService.getDeactivatedItems());
+    }
+
+    @PatchMapping("/items/{id}/reactivate")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<Void> reactivateItem(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal UserDetails user) {
+        inventoryService.reactivateItem(id, user.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── GLOBAL ADJUSTMENT HISTORY ───────────────────────────────
+
+    @GetMapping("/adjustments")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<List<InventoryAdjustmentResponseDTO>> getAllAdjustments() {
+        return ResponseEntity.ok(inventoryService.getAllAdjustments());
     }
 }

@@ -21,4 +21,16 @@ public class ServiceRequestDTO {
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá phải lớn hơn 0")
     @Digits(integer = 16, fraction = 2)
     private BigDecimal unitPrice;
+
+    private Boolean isComposite;
+
+    private java.util.List<RecipeItemDTO> recipeItems;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RecipeItemDTO {
+        private String itemId;
+        private Integer quantityRequired;
+    }
 }

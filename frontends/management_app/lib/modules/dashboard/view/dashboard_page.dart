@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:hms_shared/auth/auth_service.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
+import 'package:management_app/modules/dashboard/view/manager_dashboard_screen.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -37,21 +38,23 @@ class _DashboardPageState extends State<DashboardPage>
   @override
   Widget build(BuildContext context) {
     final auth = Get.find<AuthService>();
-    final isWide = MediaQuery.of(context).size.width > 800;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(auth),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: isWide ? 28 : 20),
-          child: Obx(() {
-            if (auth.hasAnyRole(['OWNER'])) return _buildOwnerView(auth);
-            return _buildManagerView(auth, isWide);
-          }),
-        ),
-      ),
-    );
+    return Obx(() {
+      if (auth.hasAnyRole(['OWNER'])) {
+        final isWide = MediaQuery.of(context).size.width > 800;
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: _buildAppBar(auth),
+          body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: isWide ? 28 : 20),
+              child: _buildOwnerView(auth),
+            ),
+          ),
+        );
+      }
+      return const ManagerDashboardScreen();
+    });
   }
 
   // ─── Owner View ────────────────────────────────

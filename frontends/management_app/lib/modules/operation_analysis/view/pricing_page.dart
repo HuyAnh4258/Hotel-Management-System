@@ -64,34 +64,36 @@ class _PricingPageState extends State<PricingPage> {
 
   // ─── INV ──────────────────────────────────────
   Widget _invCol(InventoryViewModel vm) {
-    final items = _sortInv(vm);
-    return Column(
-      children: [
-        _colHdr(
-          'Vật tư',
-          Icons.inventory_2_outlined,
-          AppColors.info,
-          items.length,
-          _invSortBy,
-          _invAsc,
-          () => setState(() {
-            _invAsc = !_invAsc;
-          }),
-          (v) => setState(() => _invSortBy = v),
-        ),
-        _searchBar(_invSearch, 'Tìm vật tư...', vm.onSearchChanged, () {
-          _invSearch.clear();
-          vm.clearSearch();
-        }),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-            itemCount: items.length,
-            itemBuilder: (_, i) => _invRow(items[i], vm),
+    return Obx(() {
+      final items = _sortInv(vm);
+      return Column(
+        children: [
+          _colHdr(
+            'Vật tư',
+            Icons.inventory_2_outlined,
+            AppColors.info,
+            items.length,
+            _invSortBy,
+            _invAsc,
+            () => setState(() {
+              _invAsc = !_invAsc;
+            }),
+            (v) => setState(() => _invSortBy = v),
           ),
-        ),
-      ],
-    );
+          _searchBar(_invSearch, 'Tìm vật tư...', vm.onSearchChanged, () {
+            _invSearch.clear();
+            vm.clearSearch();
+          }),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+              itemCount: items.length,
+              itemBuilder: (_, i) => _invRow(items[i], vm),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   List<InventoryItem> _sortInv(InventoryViewModel vm) {
