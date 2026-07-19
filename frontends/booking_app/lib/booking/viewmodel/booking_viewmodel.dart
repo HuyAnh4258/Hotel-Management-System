@@ -19,10 +19,21 @@ class BookingApi {
     );
   }
 
-  static Future<List<BookingSummary>> getBookings({String? date}) async {
+  static Future<List<BookingSummary>> getBookings({
+    String? date,
+    String? userId,
+  }) async {
+    final queryParameters = <String, dynamic>{};
+    if (date != null && date.isNotEmpty) {
+      queryParameters['date'] = date;
+    }
+    if (userId != null && userId.isNotEmpty) {
+      queryParameters['userId'] = userId;
+    }
+
     final response = await _dio.get(
       '',
-      queryParameters: date == null ? null : {'date': date},
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     final data = response.data as List<dynamic>;
     return data
@@ -147,6 +158,7 @@ class CreateBookingPayload {
     required this.fullName,
     required this.phone,
     required this.email,
+    required this.userId,
     required this.roomTypeId,
     required this.roomId,
     required this.expectedCheckin,
@@ -156,6 +168,7 @@ class CreateBookingPayload {
   final String fullName;
   final String phone;
   final String email;
+  final String userId;
   final String roomTypeId;
   final String roomId;
   final String expectedCheckin;
@@ -165,6 +178,7 @@ class CreateBookingPayload {
     'guestName': fullName,
     'phone': phone,
     'email': email,
+    'userId': userId,
     'roomIds': [roomId],
     'expectedCheckin': expectedCheckin,
     'expectedCheckout': expectedCheckout,
