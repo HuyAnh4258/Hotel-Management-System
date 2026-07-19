@@ -10,9 +10,11 @@ import 'package:management_app/modules/catalogue_management/viewmodel/voucher_vi
 import 'package:management_app/modules/operation_analysis/viewmodel/service_viewmodel.dart';
 import 'package:management_app/core/services/websocket_service.dart';
 import 'package:management_app/routes/app_pages.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi_VN', null);
 
   final tokenStorage = TokenStorage();
   final dioClient = DioClient(tokenStorage);
