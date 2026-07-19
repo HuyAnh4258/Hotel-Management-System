@@ -18,7 +18,7 @@ class BookingApp extends StatelessWidget {
       initialBinding: BindingsBuilder(() {
         Get.put(AuthViewModel(), permanent: true);
       }),
-      initialRoute: '/splash',
+      initialRoute: '/dashboard',
       getPages: [
         GetPage(name: '/splash', page: () => const SplashPage()),
         GetPage(name: '/login', page: () => const LoginPage()),

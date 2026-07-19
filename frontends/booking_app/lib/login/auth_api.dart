@@ -56,6 +56,8 @@ class AuthResponse {
     required this.roles,
     required this.roleIds,
     required this.fullName,
+    required this.email,
+    required this.phone,
   });
 
   final String accessToken;
@@ -64,6 +66,8 @@ class AuthResponse {
   final List<String> roles;
   final List<String> roleIds;
   final String fullName;
+  final String email;
+  final String phone;
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
@@ -77,6 +81,8 @@ class AuthResponse {
           .map((e) => e.toString())
           .toList(),
       fullName: json['fullName']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
     );
   }
 }

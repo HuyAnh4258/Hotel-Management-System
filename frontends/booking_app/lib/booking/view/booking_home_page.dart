@@ -38,11 +38,58 @@ class _BookingHomePageState extends State<BookingHomePage> {
         title: const Text('Hotel Booking'),
         backgroundColor: Colors.transparent,
         actions: [
-          IconButton(
-            onPressed: authVm.logout,
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-          ),
+          if (authVm.isLoggedIn)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: authVm.logout,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: 0.14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text(
+                  'Đăng xuất',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => Get.toNamed('/login'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: 0.14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.login_rounded, size: 20),
+                label: const Text(
+                  'Đăng nhập',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
         ],
       ),
       body: Container(
@@ -101,6 +148,8 @@ class _BookingHomePageState extends State<BookingHomePage> {
                               '${roomType.description}\nGiá từ ${roomType.basePrice.toStringAsFixed(0)}',
                           imagePath: roomType.imagePath,
                           onTap: () async {
+                            if (!context.mounted) return;
+
                             final changed = await Navigator.of(context)
                                 .push<bool>(
                                   MaterialPageRoute(

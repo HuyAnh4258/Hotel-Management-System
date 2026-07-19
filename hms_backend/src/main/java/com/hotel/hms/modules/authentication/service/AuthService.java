@@ -55,7 +55,10 @@ public class AuthService {
                 .map(ur -> ur.getRole().getRoleId())
                 .toList();
 
-        String fullName = resolveFullName(user.getUserId(), roles);
+        GuestProfile guestProfile = guestRepo.findByUserId(user.getUserId()).orElse(null);
+        String fullName = guestProfile != null ? guestProfile.getFullName() : null;
+        String phone = guestProfile != null ? guestProfile.getPhone() : null;
+        String email = user.getEmail();
         String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername(), roles);
 
         return LoginResponse.builder()
@@ -65,6 +68,8 @@ public class AuthService {
                 .roles(roles)
                 .roleIds(roleIds)
                 .fullName(fullName)
+                .phone(phone)
+                .email(email)
                 .build();
     }
 
@@ -113,6 +118,8 @@ public class AuthService {
                 .roles(roles)
                 .roleIds(roleIds)
                 .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .email(request.getEmail())
                 .build();
     }
 
@@ -153,12 +160,6 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setIsActive(false);
         userRepo.save(user);
-    }
-
-    private String resolveFullName(String userId, List<String> roles) {
-        return guestRepo.findByUserId(userId)
-                .map(GuestProfile::getFullName)
-                .orElse(null);
     }
 
     private String generateRandomPassword() {

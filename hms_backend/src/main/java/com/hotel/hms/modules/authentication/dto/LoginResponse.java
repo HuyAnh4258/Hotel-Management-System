@@ -15,4 +15,6 @@ public class LoginResponse {
     private List<String> roles;
     private List<String> roleIds;
     private String fullName;
+    private String phone;
+    private String email;
 }
