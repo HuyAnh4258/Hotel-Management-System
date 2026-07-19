@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream:hms_backend/src/main/java/com/hotel/hms/dto/BookingSummary.java
 package com.hotel.hms.dto;
+=======
+package com.hotel.hms.modules.booking_management.dto;
+>>>>>>> Stashed changes:hms_backend/src/main/java/com/hotel/hms/modules/booking_management/dto/BookingSummary.java
 
 import java.math.BigDecimal;
 import java.util.List;

@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream:hms_backend/src/main/java/com/hotel/hms/entity/Room.java
 package com.hotel.hms.entity;
+=======
+package com.hotel.hms.modules.booking_management.entity;
+>>>>>>> Stashed changes:hms_backend/src/main/java/com/hotel/hms/modules/booking_management/entity/Room.java
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

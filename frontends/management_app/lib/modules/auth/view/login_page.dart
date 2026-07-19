@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage>
               if (progress == null) return child;
               return Container(color: AppColors.primary);
             },
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -106,12 +106,12 @@ class _LoginPageState extends State<LoginPage>
           ),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.40)),
+            child: Container(color: Colors.black.withValues(alpha: 0.40)),
           ),
           SafeArea(
             child: AnimatedBuilder(
               animation: _ctrl,
-              builder: (_, __) => isWide ? _buildWide(vm) : _buildNarrow(vm),
+              builder: (_, _) => isWide ? _buildWide(vm) : _buildNarrow(vm),
             ),
           ),
         ],
@@ -134,7 +134,7 @@ class _LoginPageState extends State<LoginPage>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 50,
                   offset: const Offset(0, 25),
                 ),
@@ -164,7 +164,7 @@ class _LoginPageState extends State<LoginPage>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 width: 2,
                               ),
                             ),
@@ -179,7 +179,7 @@ class _LoginPageState extends State<LoginPage>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.03),
+                                color: Colors.white.withValues(alpha: 0.03),
                                 width: 2,
                               ),
                             ),
@@ -207,7 +207,7 @@ class _LoginPageState extends State<LoginPage>
                               const SizedBox(height: 8),
                               AnimatedBuilder(
                                 animation: _goldLineWidth,
-                                builder: (_, __) => Container(
+                                builder: (_, _) => Container(
                                   height: 3,
                                   width: 40 * _goldLineWidth.value,
                                   decoration: BoxDecoration(
@@ -295,7 +295,7 @@ class _LoginPageState extends State<LoginPage>
                         const SizedBox(height: 6),
                         AnimatedBuilder(
                           animation: _goldLineWidth,
-                          builder: (_, __) => Container(
+                          builder: (_, _) => Container(
                             height: 2,
                             width: 28 * _goldLineWidth.value,
                             decoration: BoxDecoration(
@@ -330,7 +330,7 @@ class _LoginPageState extends State<LoginPage>
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Colors.black.withValues(alpha: 0.25),
                               blurRadius: 24,
                             ),
                           ],

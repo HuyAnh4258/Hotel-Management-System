@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream:hms_backend/src/main/java/com/hotel/hms/repository/RoomBookingRepository.java
 package com.hotel.hms.repository;
+=======
+package com.hotel.hms.modules.booking_management.repository;
+>>>>>>> Stashed changes:hms_backend/src/main/java/com/hotel/hms/modules/booking_management/repository/RoomBookingRepository.java
 
 import com.hotel.hms.entity.RoomBooking;
 import java.time.LocalDateTime;

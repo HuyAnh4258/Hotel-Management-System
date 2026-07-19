@@ -32,16 +32,16 @@ public class AuthService {
         String input = request.getUsername();
         User user = input.contains("@")
                 ? userRepo.findByEmail(input)
-                    .orElseThrow(() -> new RuntimeException("Sai tên đăng nhập hoặc mật khẩu"))
+                    .orElseThrow(() -> new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u"))
                 : userRepo.findByUsername(input)
-                    .orElseThrow(() -> new RuntimeException("Sai tên đăng nhập hoặc mật khẩu"));
+                    .orElseThrow(() -> new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u"));
 
         if (!user.getIsActive()) {
-            throw new RuntimeException("Tài khoản đã bị vô hiệu hoá");
+            throw new RuntimeException("TÃ i khoáº£n Ä‘Ã£ bá»‹ vÃ´ hiá»‡u hoÃ¡");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getHashedPassword())) {
-            throw new RuntimeException("Sai tên đăng nhập hoặc mật khẩu");
+            throw new RuntimeException("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u");
         }
 
         List<String> roles = userRoleRepo.findByUser_UserId(user.getUserId()).stream()
@@ -63,17 +63,17 @@ public class AuthService {
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         if (userRepo.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+            throw new RuntimeException("TÃªn Ä‘Äƒng nháº­p Ä‘Ã£ tá»“n táº¡i");
         }
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã tồn tại");
+            throw new RuntimeException("Email Ä‘Ã£ tá»“n táº¡i");
         }
         if (guestRepo.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("Số điện thoại đã tồn tại");
+            throw new RuntimeException("Sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ tá»“n táº¡i");
         }
 
         Role guestRole = roleRepo.findByRoleName("GUEST")
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy role GUEST"));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y role GUEST"));
 
         String userId = idGenerator.generateStaticId("USR", userRepo);
 
@@ -109,10 +109,10 @@ public class AuthService {
     @Transactional
     public void createEmployee(EmployeeCreateRequest request) {
         if (userRepo.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+            throw new RuntimeException("TÃªn Ä‘Äƒng nháº­p Ä‘Ã£ tá»“n táº¡i");
         }
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã tồn tại");
+            throw new RuntimeException("Email Ä‘Ã£ tá»“n táº¡i");
         }
 
         Role role = roleRepo.findByRoleName(request.getRole())

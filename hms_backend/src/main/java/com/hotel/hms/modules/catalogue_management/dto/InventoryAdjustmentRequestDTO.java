@@ -11,19 +11,19 @@ import java.math.BigDecimal;
 @Builder
 public class InventoryAdjustmentRequestDTO {
 
-    @NotBlank(message = "Mã vật tư không được trống")
+    @NotBlank(message = "MÃ£ váº­t tÆ° khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     private String itemId;
 
-    @NotNull(message = "Số lượng không được trống")
+    @NotNull(message = "Sá»‘ lÆ°á»£ng khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     private Integer quantity;
 
-    @NotNull(message = "Loại điều chỉnh không được trống")
+    @NotNull(message = "Loáº¡i Ä‘iá»u chá»‰nh khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     private AdjustmentType type;
 
     @DecimalMin(value = "0.0", inclusive = true)
     @Digits(integer = 18, fraction = 2)
     private BigDecimal unitCost;
 
-    @Size(max = 255, message = "Lý do tối đa 255 ký tự")
+    @Size(max = 255, message = "LÃ½ do tá»‘i Ä‘a 255 kÃ½ tá»±")
     private String reason;
 }

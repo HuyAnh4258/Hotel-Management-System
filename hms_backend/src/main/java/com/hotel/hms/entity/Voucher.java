@@ -1,14 +1,24 @@
+<<<<<<< Updated upstream:hms_backend/src/main/java/com/hotel/hms/entity/Voucher.java
 package com.hotel.hms.entity;
+=======
+package com.hotel.hms.modules.booking_management.entity;
+>>>>>>> Stashed changes:hms_backend/src/main/java/com/hotel/hms/modules/booking_management/entity/Voucher.java
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Voucher")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Voucher {
     @Id
     @Column(name = "VoucherId", length = 12)

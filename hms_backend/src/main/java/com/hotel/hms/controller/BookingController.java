@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream:hms_backend/src/main/java/com/hotel/hms/controller/BookingController.java
 package com.hotel.hms.controller;
+=======
+package com.hotel.hms.modules.booking_management.controller;
+>>>>>>> Stashed changes:hms_backend/src/main/java/com/hotel/hms/modules/booking_management/controller/BookingController.java
 
 import com.hotel.hms.dto.BookingSummary;
 import com.hotel.hms.dto.CreateBookingRequest;

@@ -25,7 +25,7 @@ public class InventoryController {
 
     private final IInventoryService inventoryService;
 
-    // ── ITEM (MANAGER only for mutations, OWNER read-only) ─────
+    // â”€â”€ ITEM (MANAGER only for mutations, OWNER read-only) â”€â”€â”€â”€â”€
 
     @GetMapping("/items")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -75,7 +75,7 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.updateItemPrice(id, body.get("unitPrice"), user.getUsername()));
     }
 
-    // ── ADJUSTMENT (RBAC enforced per type) ─────────────────────
+    // â”€â”€ ADJUSTMENT (RBAC enforced per type) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @PostMapping("/adjustments")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'SERVICE_STAFF', 'HOUSEKEEPER')")
@@ -104,7 +104,7 @@ public class InventoryController {
                 }
             }
             case AUTO_SELL -> {
-                // System-only — no human role allowed
+                // System-only â€” no human role allowed
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
         }
@@ -113,7 +113,7 @@ public class InventoryController {
                 .body(inventoryService.processInventoryAdjustment(request, user.getUsername()));
     }
 
-    // ── HISTORY & REPORTS ───────────────────────────────────────
+    // â”€â”€ HISTORY & REPORTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @GetMapping("/items/{id}/history")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -135,7 +135,7 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getExpenseReport(fromDate, toDate));
     }
 
-    // ── DEACTIVATED ITEMS & REACTIVATION ────────────────────────
+    // â”€â”€ DEACTIVATED ITEMS & REACTIVATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @GetMapping("/items/deactivated")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -152,7 +152,7 @@ public class InventoryController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── GLOBAL ADJUSTMENT HISTORY ───────────────────────────────
+    // â”€â”€ GLOBAL ADJUSTMENT HISTORY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @GetMapping("/adjustments")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
