@@ -1,6 +1,6 @@
-package com.hotel.hms.repository;
+﻿package com.hotel.hms.modules.booking_management.repository;
 
-import com.hotel.hms.entity.Voucher;
+import com.hotel.hms.modules.booking_management.entity.Voucher;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

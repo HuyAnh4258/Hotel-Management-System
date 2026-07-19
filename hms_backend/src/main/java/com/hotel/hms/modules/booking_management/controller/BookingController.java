@@ -1,9 +1,9 @@
-package com.hotel.hms.controller;
+﻿package com.hotel.hms.modules.booking_management.controller;
 
-import com.hotel.hms.dto.BookingSummary;
-import com.hotel.hms.dto.CreateBookingRequest;
-import com.hotel.hms.dto.HomepageResponse;
-import com.hotel.hms.service.BookingService;
+import com.hotel.hms.modules.booking_management.dto.BookingSummary;
+import com.hotel.hms.modules.booking_management.dto.CreateBookingRequest;
+import com.hotel.hms.modules.booking_management.dto.HomepageResponse;
+import com.hotel.hms.modules.booking_management.service.BookingService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;

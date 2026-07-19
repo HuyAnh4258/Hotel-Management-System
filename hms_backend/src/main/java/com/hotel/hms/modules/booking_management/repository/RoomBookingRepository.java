@@ -1,6 +1,6 @@
-package com.hotel.hms.repository;
+﻿package com.hotel.hms.modules.booking_management.repository;
 
-import com.hotel.hms.entity.RoomBooking;
+import com.hotel.hms.modules.booking_management.entity.RoomBooking;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
