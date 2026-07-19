@@ -3,6 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+// ─── Colour Tokens ────────────────────────────────────────────────────────────
+const _kDeep    = Color(0xFF1C0A04);   // nền nâu tối
+const _kNavy    = Color(0xFF2D1408);   // nền phụ
+const _kGold    = Color(0xFFF97316);   // cam chủ đạo
+const _kGoldLight = Color(0xFFFDBA74); // cam nhạt
+const _kWhite   = Colors.white;
+
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key});
 
@@ -10,33 +17,53 @@ class IntroPage extends StatefulWidget {
   State<IntroPage> createState() => _IntroPageState();
 }
 
-class _IntroPageState extends State<IntroPage> {
+class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
   static const _bannerImages = [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80',
-    'https://images.unsplash.com/photo-1501117716987-c8e1ecb21012?w=1200&q=80',
+    'assets/images/intro1.png',
+    'assets/images/intro2.png',
+    'assets/images/intro3.png',
   ];
 
-  static const _galleryImages = [
-    'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&q=80',
-    'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1200&q=80',
-    'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&q=80',
-    'https://images.unsplash.com/photo-1560067174-8943bd0d5b34?w=1200&q=80',
+  static const _bannerLabels = [
+    'Nghỉ dưỡng sang trọng',
+    'Không gian thư thái',
+    'Trải nghiệm đỉnh cao',
   ];
 
-  final PageController _bannerController = PageController();
-  Timer? _bannerTimer;
-  int _currentBanner = 0;
+  final PageController _pageController = PageController();
+  Timer? _timer;
+  int _currentIndex = 0;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
-    _bannerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (!_bannerController.hasClients) return;
 
-      final nextPage = (_currentBanner + 1) % _bannerImages.length;
-      _bannerController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 650),
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final next = (_currentIndex + 1) % _bannerImages.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 800),
         curve: Curves.easeInOutCubic,
       );
     });
@@ -44,180 +71,257 @@ class _IntroPageState extends State<IntroPage> {
 
   @override
   void dispose() {
-    _bannerTimer?.cancel();
-    _bannerController.dispose();
+    _timer?.cancel();
+    _pageController.dispose();
+    _fadeCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF07111F), Color(0xFF102A5C), Color(0xFF162447)],
+      backgroundColor: _kDeep,
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildHeroFullScreen(),
+              _buildStatsBar(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 36),
+                    _buildAboutSection(),
+                    const SizedBox(height: 32),
+                    _buildServicesGrid(),
+                    const SizedBox(height: 32),
+                    _buildTestimonial(),
+                    const SizedBox(height: 32),
+                    _buildCTA(),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1180),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeroSection(context),
-                    const SizedBox(height: 28),
-                    _buildIntroArticle(),
-                    const SizedBox(height: 28),
-                    _buildServiceHighlights(),
-                    const SizedBox(height: 28),
-                    _buildGallerySection(),
-                    const SizedBox(height: 28),
-                    _buildExperienceSection(),
-                    const SizedBox(height: 28),
-                    _buildCallToAction(),
+      ),
+    );
+  }
+
+  // ─── Hero: Full-screen banner ────────────────────────────────────────────────
+  Widget _buildHeroFullScreen() {
+    final screenH = MediaQuery.of(context).size.height;
+    return SizedBox(
+      height: screenH * 0.78,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // PageView images
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _bannerImages.length,
+            onPageChanged: (i) => setState(() => _currentIndex = i),
+            itemBuilder: (_, i) => Image.asset(
+              _bannerImages[i],
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: _kNavy),
+            ),
+          ),
+
+          // Gradient overlay (bottom)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.35, 0.7, 1.0],
+                  colors: [
+                    Colors.black.withValues(alpha: 0.10),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.60),
+                    _kDeep,
                   ],
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildHeroSection(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 860;
-
-        final content = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBrandBadge(),
-            const SizedBox(height: 22),
-            const Text(
-              'Khách sạn FPT\nNơi kỳ nghỉ bắt đầu',
-              style: TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                height: 1.08,
-                letterSpacing: -0.8,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Tận hưởng không gian lưu trú hiện đại, dịch vụ tận tâm và hệ sinh thái đặt phòng thông minh. FPT Hotel mang đến trải nghiệm nghỉ dưỡng trọn vẹn cho gia đình, cặp đôi, khách công tác và mọi chuyến đi đáng nhớ.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                height: 1.7,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: const [
-                _InfoChip(icon: Icons.star_rounded, text: 'Dịch vụ 5 sao'),
-                _InfoChip(
-                  icon: Icons.support_agent_rounded,
-                  text: 'Hỗ trợ 24/7',
+          // Top bar: logo + badge
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _glassPill(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ScaleTransition(
+                        scale: _pulseAnim,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: _kGold,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'FPT HOTEL',
+                        style: TextStyle(
+                          color: _kWhite,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                _InfoChip(
-                  icon: Icons.verified_rounded,
-                  text: 'Đặt phòng an toàn',
+                _glassPill(
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star_rounded, color: _kGold, size: 15),
+                      SizedBox(width: 5),
+                      Text(
+                        '5 Sao',
+                        style: TextStyle(
+                          color: _kWhite,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
-        );
-
-        final banner = _AutoBanner(
-          controller: _bannerController,
-          images: _bannerImages,
-          currentIndex: _currentBanner,
-          onChanged: (index) => setState(() => _currentBanner = index),
-        );
-
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(flex: 5, child: content),
-              const SizedBox(width: 34),
-              Expanded(flex: 5, child: banner),
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [content, const SizedBox(height: 26), banner],
-        );
-      },
-    );
-  }
-
-  Widget _buildBrandBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      child: const Text(
-        'FPT HOTEL • PREMIUM BOOKING',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIntroArticle() {
-    return _GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          _SectionTitle(
-            eyebrow: 'Câu chuyện thương hiệu',
-            title: 'Không gian nghỉ dưỡng được thiết kế cho sự thoải mái',
           ),
-          SizedBox(height: 16),
-          Text(
-            'FPT Hotel được xây dựng với mong muốn tạo ra một điểm dừng chân sang trọng, tiện nghi và gần gũi. Mỗi căn phòng đều được chăm chút từ ánh sáng, màu sắc, nội thất đến các tiện ích đi kèm để khách hàng luôn cảm thấy thư giãn như đang ở nhà nhưng vẫn tận hưởng tiêu chuẩn dịch vụ chuyên nghiệp.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15.5,
-              height: 1.75,
+
+          // Bottom content: title + indicator
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 36,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Slide label
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: Text(
+                    _bannerLabels[_currentIndex],
+                    key: ValueKey(_currentIndex),
+                    style: TextStyle(
+                      color: _kGold,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Khách sạn FPT\nNơi kỳ nghỉ\nbắt đầu',
+                  style: TextStyle(
+                    color: _kWhite,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Indicator dots
+                Row(
+                  children: List.generate(_bannerImages.length, (i) {
+                    final active = i == _currentIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOut,
+                      width: active ? 32 : 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? _kGold
+                            : _kWhite.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                // CTA button
+                GestureDetector(
+                  onTap: () => Get.offAllNamed('/dashboard'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [_kGold, _kGoldLight],
+                      ),
+                      borderRadius: BorderRadius.circular(99),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _kGold.withValues(alpha: 0.45),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Đặt phòng ngay',
+                          style: TextStyle(
+                            color: Color(0xFF3D1503),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Color(0xFF3D1503),
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 12),
-          Text(
-            'Từ khoảnh khắc đặt phòng, nhận phòng, sử dụng dịch vụ nhà hàng, spa, đưa đón cho đến khi kết thúc kỳ nghỉ, hệ thống quản lý khách sạn hỗ trợ mọi thao tác nhanh chóng và minh bạch. Đội ngũ nhân viên luôn sẵn sàng lắng nghe, tư vấn và cá nhân hóa trải nghiệm theo nhu cầu của từng khách hàng.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15.5,
-              height: 1.75,
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Dù bạn cần một nơi nghỉ ngơi sau chuyến công tác, một kỳ nghỉ cuối tuần cùng gia đình hay một không gian lãng mạn cho những dịp đặc biệt, FPT Hotel luôn có lựa chọn phù hợp với mức giá rõ ràng, quy trình đặt phòng thuận tiện và nhiều ưu đãi hấp dẫn.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15.5,
-              height: 1.75,
+
+          // Scroll hint
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: ScaleTransition(
+                scale: _pulseAnim,
+                child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: _kWhite.withValues(alpha: 0.5),
+                  size: 28,
+                ),
+              ),
             ),
           ),
         ],
@@ -225,337 +329,316 @@ class _IntroPageState extends State<IntroPage> {
     );
   }
 
-  Widget _buildServiceHighlights() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 780;
-        final cards = [
-          const _HighlightCard(
-            icon: Icons.king_bed_rounded,
-            title: 'Phòng nghỉ tinh tế',
-            text:
-                'Giường êm ái, nội thất hiện đại, tầm nhìn thoáng đãng và đầy đủ tiện nghi cho mọi nhu cầu lưu trú.',
+  // ─── Stats bar ──────────────────────────────────────────────────────────────
+  Widget _buildStatsBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      transform: Matrix4.translationValues(0, -30, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_kGold, _kGoldLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: _kGold.withValues(alpha: 0.45),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
           ),
-          const _HighlightCard(
-            icon: Icons.restaurant_menu_rounded,
-            title: 'Ẩm thực đa dạng',
-            text:
-                'Thực đơn phong phú, nguyên liệu chọn lọc và không gian nhà hàng ấm cúng cho bữa ăn trọn vẹn.',
-          ),
-          const _HighlightCard(
-            icon: Icons.room_service_rounded,
-            title: 'Dịch vụ tận tâm',
-            text:
-                'Lễ tân, dọn phòng, tư vấn đặt dịch vụ và hỗ trợ khách hàng hoạt động liên tục mỗi ngày.',
-          ),
-        ];
-
-        if (isWide) {
-          return Row(
-            children: [
-              for (int i = 0; i < cards.length; i++) ...[
-                Expanded(child: cards[i]),
-                if (i != cards.length - 1) const SizedBox(width: 16),
-              ],
-            ],
-          );
-        }
-
-        return Column(
-          children: [
-            for (int i = 0; i < cards.length; i++) ...[
-              cards[i],
-              if (i != cards.length - 1) const SizedBox(height: 14),
-            ],
-          ],
-        );
-      },
+        ],
+      ),
+      child: Row(
+        children: const [
+          Expanded(child: _StatItem(value: '500+', label: 'Phòng')),
+          _StatDivider(),
+          Expanded(child: _StatItem(value: '98%', label: 'Hài lòng')),
+          _StatDivider(),
+          Expanded(child: _StatItem(value: '24/7', label: 'Hỗ trợ')),
+          _StatDivider(),
+          Expanded(child: _StatItem(value: '5★', label: 'Chất lượng')),
+        ],
+      ),
     );
   }
 
-  Widget _buildGallerySection() {
+  // ─── About section ──────────────────────────────────────────────────────────
+  Widget _buildAboutSection() {
     return _GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle(
-            eyebrow: 'Không gian nổi bật',
-            title: 'Khám phá từng góc trải nghiệm tại FPT Hotel',
+          const _Label('VỀ CHÚNG TÔI'),
+          const SizedBox(height: 12),
+          const Text(
+            'Không gian nghỉ dưỡng\nđược thiết kế cho sự thoải mái',
+            style: TextStyle(
+              color: _kWhite,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
           ),
-          const SizedBox(height: 18),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth >= 760 ? 4 : 2;
-
-              return GridView.builder(
-                itemCount: _galleryImages.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: crossAxisCount == 4 ? 0.86 : 0.92,
-                ),
-                itemBuilder: (context, index) => _GalleryTile(
-                  imagePath: _galleryImages[index],
-                  title: switch (index) {
-                    0 => 'Sảnh đón khách',
-                    1 => 'Phòng nghỉ',
-                    2 => 'Nhà hàng',
-                    _ => 'Tiện ích',
-                  },
-                  subtitle: switch (index) {
-                    0 => 'Sang trọng và chuyên nghiệp',
-                    1 => 'Ấm cúng, hiện đại',
-                    2 => 'Hương vị tinh tế',
-                    _ => 'Thư giãn mỗi ngày',
-                  },
-                ),
-              );
-            },
+          const SizedBox(height: 16),
+          Text(
+            'FPT Hotel được xây dựng với mong muốn tạo ra điểm dừng chân sang trọng, tiện nghi và gần gũi. Mỗi căn phòng được chăm chút từ ánh sáng, màu sắc, nội thất đến các tiện ích đi kèm để khách hàng luôn cảm thấy thư giãn như ở nhà nhưng tận hưởng tiêu chuẩn dịch vụ chuyên nghiệp.',
+            style: TextStyle(
+              color: _kWhite.withValues(alpha: 0.7),
+              fontSize: 15,
+              height: 1.8,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Feature chips
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: const [
+              _FeatureChip(Icons.wifi_rounded, 'WiFi miễn phí'),
+              _FeatureChip(Icons.local_parking_rounded, 'Bãi đỗ xe'),
+              _FeatureChip(Icons.pool_rounded, 'Hồ bơi'),
+              _FeatureChip(Icons.spa_rounded, 'Spa & Gym'),
+              _FeatureChip(Icons.restaurant_rounded, 'Nhà hàng'),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExperienceSection() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 860;
-        final left = _GlassCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              _SectionTitle(
-                eyebrow: 'Vì sao chọn chúng tôi',
-                title: 'Một hành trình lưu trú mượt mà từ online đến trực tiếp',
-              ),
-              SizedBox(height: 16),
-              _FeatureRow(
-                icon: Icons.mobile_friendly_rounded,
-                text:
-                    'Đặt phòng nhanh trên hệ thống, theo dõi thông tin rõ ràng và hạn chế tối đa thời gian chờ.',
-              ),
-              SizedBox(height: 14),
-              _FeatureRow(
-                icon: Icons.cleaning_services_rounded,
-                text:
-                    'Không gian luôn được vệ sinh kỹ lưỡng, đảm bảo sự an toàn và thoải mái cho khách hàng.',
-              ),
-              SizedBox(height: 14),
-              _FeatureRow(
-                icon: Icons.local_offer_rounded,
-                text:
-                    'Nhiều gói ưu đãi linh hoạt cho đặt phòng sớm, lưu trú dài ngày và các dịp đặc biệt.',
-              ),
-            ],
+  // ─── Services grid ──────────────────────────────────────────────────────────
+  Widget _buildServicesGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Label('DỊCH VỤ NỔI BẬT'),
+        const SizedBox(height: 12),
+        const Text(
+          'Mọi tiện ích bạn cần',
+          style: TextStyle(
+            color: _kWhite,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
           ),
-        );
-
-        final right = _GlassCard(
-          child: Column(
-            children: const [
-              _MetricItem(value: '24/7', label: 'Hỗ trợ khách hàng'),
-              Divider(color: Colors.white24, height: 30),
-              _MetricItem(value: '98%', label: 'Khách hàng hài lòng'),
-              Divider(color: Colors.white24, height: 30),
-              _MetricItem(value: '5★', label: 'Tiêu chuẩn phục vụ'),
-            ],
-          ),
-        );
-
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(flex: 6, child: left),
-              const SizedBox(width: 16),
-              Expanded(flex: 4, child: right),
-            ],
-          );
-        }
-
-        return Column(children: [left, const SizedBox(height: 16), right]);
-      },
+        ),
+        const SizedBox(height: 20),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cols = constraints.maxWidth >= 600 ? 3 : 2;
+            const items = [
+              _ServiceData(Icons.king_bed_rounded, 'Phòng cao cấp',
+                  'Giường êm, nội thất hiện đại, tầm nhìn thoáng đãng.'),
+              _ServiceData(Icons.restaurant_menu_rounded, 'Ẩm thực',
+                  'Thực đơn phong phú, nguyên liệu tươi ngon mỗi ngày.'),
+              _ServiceData(Icons.spa_rounded, 'Spa & Thư giãn',
+                  'Liệu trình thư giãn chuyên nghiệp sau mỗi chuyến đi.'),
+              _ServiceData(Icons.directions_car_rounded, 'Đưa đón',
+                  'Xe sang trọng phục vụ đón tiễn sân bay 24/7.'),
+              _ServiceData(Icons.pool_rounded, 'Hồ bơi',
+                  'Không gian bơi lội rộng rãi, thoáng mát cả ngày.'),
+              _ServiceData(Icons.room_service_rounded, 'Room Service',
+                  'Phục vụ tận phòng mọi yêu cầu trong 15 phút.'),
+            ];
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.9,
+              ),
+              itemCount: items.length,
+              itemBuilder: (_, i) => _ServiceCard(data: items[i]),
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildCallToAction() {
+  // ─── Testimonial ────────────────────────────────────────────────────────────
+  Widget _buildTestimonial() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFD4AF37), Color(0xFFF6D776)],
+        border: Border.all(
+          color: _kGold.withValues(alpha: 0.3),
+          width: 1.5,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.28),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        gradient: RadialGradient(
+          center: Alignment.topLeft,
+          radius: 1.5,
+          colors: [
+            _kGold.withValues(alpha: 0.10),
+            Colors.transparent,
+          ],
+        ),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 760;
-          final text = const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sẵn sàng bắt đầu kỳ nghỉ của bạn?',
-                style: TextStyle(
-                  color: Color(0xFF111827),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Khám phá phòng trống, dịch vụ khách sạn và ưu đãi mới nhất ngay hôm nay.',
-                style: TextStyle(
-                  color: Color(0xFF374151),
-                  fontSize: 15,
-                  height: 1.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          );
-
-          final button = SizedBox(
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: () => Get.offAllNamed('/dashboard'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0F172A),
-                foregroundColor: Colors.white,
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              icon: const Icon(Icons.explore_rounded),
-              label: const Text('Khám phá dịch vụ'),
-            ),
-          );
-
-          if (isWide) {
-            return Row(
-              children: [
-                Expanded(child: text),
-                const SizedBox(width: 22),
-                button,
-              ],
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              text,
-              const SizedBox(height: 18),
-              SizedBox(width: double.infinity, child: button),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AutoBanner extends StatelessWidget {
-  const _AutoBanner({
-    required this.controller,
-    required this.images,
-    required this.currentIndex,
-    required this.onChanged,
-  });
-
-  final PageController controller;
-  final List<String> images;
-  final int currentIndex;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.05,
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 36,
-                    offset: const Offset(0, 20),
+          const Icon(Icons.format_quote_rounded, color: _kGold, size: 40),
+          const SizedBox(height: 12),
+          const Text(
+            '"Dịch vụ tuyệt vời, phòng sạch sẽ và nhân viên thân thiện. Tôi đã có kỳ nghỉ đáng nhớ nhất trong cuộc đời tại FPT Hotel!"',
+            style: TextStyle(
+              color: _kWhite,
+              fontSize: 16,
+              height: 1.75,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: _kGold.withValues(alpha: 0.18),
+                child: const Text(
+                  'AN',
+                  style: TextStyle(
+                    color: _kGold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nguyễn Anh',
+                    style: TextStyle(
+                      color: _kWhite,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    'Khách hạng VIP • TP.HCM',
+                    style: TextStyle(
+                      color: _kWhite.withValues(alpha: 0.55),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: PageView.builder(
-                  controller: controller,
-                  itemCount: images.length,
-                  onPageChanged: onChanged,
-                  itemBuilder: (context, index) => Image.network(
-                    images[index],
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported_rounded,
-                          color: Colors.white70,
-                          size: 46,
-                        ),
-                      ),
-                    ),
+              const Spacer(),
+              Row(
+                children: List.generate(
+                  5,
+                  (_) => const Icon(
+                    Icons.star_rounded,
+                    color: _kGold,
+                    size: 18,
                   ),
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── CTA ────────────────────────────────────────────────────────────────────
+  Widget _buildCTA() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_kGold, _kGoldLight, Color(0xFFFED7AA)],
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: _kGold.withValues(alpha: 0.5),
+            blurRadius: 36,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.hotel_rounded,
+              color: Color(0xFF3D1503),
+              size: 36,
             ),
           ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                images.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  width: currentIndex == index ? 28 : 9,
-                  height: 9,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: currentIndex == index
-                        ? const Color(0xFFD4AF37)
-                        : Colors.white.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(999),
+          const SizedBox(height: 20),
+          const Text(
+            'Sẵn sàng cho\nkỳ nghỉ của bạn?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF3D1503),
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Khám phá phòng trống và ưu đãi mới nhất\nngay hôm nay.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF111827).withValues(alpha: 0.7),
+              fontSize: 14,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 28),
+          GestureDetector(
+            onTap: () => Get.offAllNamed('/dashboard'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 36,
+                vertical: 17,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(99),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
-                ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.explore_rounded,
+                    color: _kGold,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Khám phá dịch vụ',
+                    style: TextStyle(
+                      color: _kWhite,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -563,27 +646,40 @@ class _AutoBanner extends StatelessWidget {
       ),
     );
   }
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  Widget _glassPill({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: _kWhite.withValues(alpha: 0.18)),
+      ),
+      child: child,
+    );
+  }
 }
 
+// ─── Reusable widgets ──────────────────────────────────────────────────────────
 class _GlassCard extends StatelessWidget {
   const _GlassCard({required this.child});
-
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.09),
+        color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 24,
-            offset: const Offset(0, 14),
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -592,34 +688,45 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.eyebrow, required this.title});
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+  final String text;
 
-  final String eyebrow;
-  final String title;
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(
+          color: _kGold,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 2,
+        ),
+      );
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({required this.value, required this.label});
+  final String value, label;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          eyebrow.toUpperCase(),
+          value,
           style: const TextStyle(
-            color: Color(0xFFD4AF37),
-            fontSize: 12,
+            color: Color(0xFF111827),
+            fontSize: 20,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 25,
-            fontWeight: FontWeight.w900,
-            height: 1.2,
+          label,
+          style: TextStyle(
+            color: const Color(0xFF111827).withValues(alpha: 0.7),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -627,31 +734,40 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.text});
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 32,
+        color: const Color(0xFF111827).withValues(alpha: 0.25),
+      );
+}
 
+class _FeatureChip extends StatelessWidget {
+  const _FeatureChip(this.icon, this.label);
   final IconData icon;
-  final String text;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        color: _kGold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: _kGold.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: const Color(0xFFD4AF37), size: 18),
-          const SizedBox(width: 8),
+          Icon(icon, color: _kGold, size: 15),
+          const SizedBox(width: 7),
           Text(
-            text,
+            label,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
+              color: _kWhite,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -661,199 +777,61 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-class _HighlightCard extends StatelessWidget {
-  const _HighlightCard({
-    required this.icon,
-    required this.title,
-    required this.text,
-  });
-
+class _ServiceData {
+  const _ServiceData(this.icon, this.title, this.desc);
   final IconData icon;
-  final String title;
-  final String text;
+  final String title, desc;
+}
+
+class _ServiceCard extends StatelessWidget {
+  const _ServiceCard({required this.data});
+  final _ServiceData data;
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCard(
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_kGold, _kGoldLight],
+              ),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: const Color(0xFFD4AF37), size: 29),
+            child: Icon(data.icon, color: const Color(0xFF111827), size: 24),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
-            title,
+            data.title,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              color: _kWhite,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            text,
-            style: const TextStyle(color: Colors.white70, height: 1.6),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GalleryTile extends StatelessWidget {
-  const _GalleryTile({
-    required this.imagePath,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String imagePath;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.network(
-            imagePath,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                color: Colors.white.withValues(alpha: 0.1),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFFD4AF37),
-                  ),
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: Colors.white.withValues(alpha: 0.1),
-              child: const Icon(
-                Icons.image_not_supported_rounded,
-                color: Colors.white70,
-              ),
-            ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.78),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 14,
-            right: 14,
-            bottom: 14,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-                ),
-              ],
+            data.desc,
+            style: TextStyle(
+              color: _kWhite.withValues(alpha: 0.6),
+              fontSize: 12,
+              height: 1.6,
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MetricItem extends StatelessWidget {
-  const _MetricItem({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Color(0xFFD4AF37),
-            fontSize: 34,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: const Color(0xFFD4AF37)),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
