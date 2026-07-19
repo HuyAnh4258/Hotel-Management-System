@@ -1,4 +1,4 @@
-package com.hotel.hms.dto;
+﻿package com.hotel.hms.modules.booking_management.dto;
 
 import java.time.LocalDate;
 import java.util.List;
