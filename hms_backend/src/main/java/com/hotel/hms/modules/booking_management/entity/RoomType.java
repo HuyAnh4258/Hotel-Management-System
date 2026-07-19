@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "RoomType")
+@lombok.Getter
+@lombok.Setter
 public class RoomType {
     @Id
     @Column(name = "RoomTypeId", length = 12)

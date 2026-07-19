@@ -38,14 +38,14 @@ class _PricingPageState extends State<PricingPage> {
     );
   }
 
-  Widget _wide(i, s) => Row(
+  Widget _wide(InventoryViewModel i, ServiceViewModel s) => Row(
     children: [
       Expanded(child: _invCol(i)),
       Container(width: 1, color: AppColors.border),
       Expanded(child: _svcCol(s)),
     ],
   );
-  Widget _narrow(i, s) => DefaultTabController(
+  Widget _narrow(InventoryViewModel i, ServiceViewModel s) => DefaultTabController(
     length: 2,
     child: Column(
       children: [

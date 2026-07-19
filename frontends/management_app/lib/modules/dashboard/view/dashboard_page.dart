@@ -122,6 +122,15 @@ class _DashboardPageState extends State<DashboardPage>
         ),
         const SizedBox(height: 12),
         _ownerCard(
+          'Quản lý Phòng & Hạng phòng',
+          'Thiết lập phòng, tầng và hạng phòng',
+          Icons.meeting_room_outlined,
+          AppColors.success,
+          true,
+          () => Get.toNamed('/property'),
+        ),
+        const SizedBox(height: 12),
+        _ownerCard(
           'Audit hệ thống',
           'Nhật ký hoạt động và thay đổi',
           Icons.history,
