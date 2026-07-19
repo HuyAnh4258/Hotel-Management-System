@@ -1,7 +1,7 @@
-package com.hotel.hms.controller;
+package com.hotel.hms.modules.booking_management.controller;
 
-import com.hotel.hms.dto.RoomDTO;
-import com.hotel.hms.service.RoomService;
+import com.hotel.hms.modules.booking_management.dto.RoomDTO;
+import com.hotel.hms.modules.booking_management.service.RoomService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;

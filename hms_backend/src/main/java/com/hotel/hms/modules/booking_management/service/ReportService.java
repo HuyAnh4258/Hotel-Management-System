@@ -1,10 +1,10 @@
-package com.hotel.hms.service;
+package com.hotel.hms.modules.booking_management.service;
 
-import com.hotel.hms.dto.report.CostReport;
-import com.hotel.hms.dto.report.FeedbackReport;
-import com.hotel.hms.dto.report.OccupancyReport;
-import com.hotel.hms.dto.report.RevenueReport;
-import com.hotel.hms.repository.ReportRepository;
+import com.hotel.hms.modules.booking_management.dto.report.CostReport;
+import com.hotel.hms.modules.booking_management.dto.report.FeedbackReport;
+import com.hotel.hms.modules.booking_management.dto.report.OccupancyReport;
+import com.hotel.hms.modules.booking_management.dto.report.RevenueReport;
+import com.hotel.hms.modules.booking_management.repository.ReportRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../viewmodel/room_viewmodel.dart';
 
 class RoomListPage extends StatefulWidget {
@@ -52,6 +53,13 @@ class _RoomListPageState extends State<RoomListPage>
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded),
+            tooltip: 'Hồ sơ cá nhân',
+            onPressed: () => Get.toNamed('/profile'),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

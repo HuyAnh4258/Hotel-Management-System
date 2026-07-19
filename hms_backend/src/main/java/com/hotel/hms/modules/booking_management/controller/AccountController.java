@@ -1,9 +1,9 @@
-package com.hotel.hms.controller;
+package com.hotel.hms.modules.booking_management.controller;
 
-import com.hotel.hms.dto.AccountResponse;
-import com.hotel.hms.dto.CreateAccountRequest;
-import com.hotel.hms.dto.UpdateAccountRequest;
-import com.hotel.hms.service.AccountService;
+import com.hotel.hms.modules.booking_management.dto.AccountResponse;
+import com.hotel.hms.modules.booking_management.dto.CreateAccountRequest;
+import com.hotel.hms.modules.booking_management.dto.UpdateAccountRequest;
+import com.hotel.hms.modules.booking_management.service.AccountService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -78,5 +78,14 @@ public class AccountController {
     @PutMapping("/{id}/deactivate")
     public ResponseEntity<AccountResponse> deactivateAccount(@PathVariable("id") String id) {
         return ResponseEntity.ok(accountService.deactivateAccount(id));
+    }
+
+    /**
+     * PUT /api/accounts/{id}/activate
+     * Restore account: set IsActive = true.
+     */
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<AccountResponse> activateAccount(@PathVariable("id") String id) {
+        return ResponseEntity.ok(accountService.activateAccount(id));
     }
 }

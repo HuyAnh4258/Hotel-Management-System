@@ -8,11 +8,13 @@ class AccountCard extends StatelessWidget {
     required this.account,
     required this.onTap,
     required this.onDeactivate,
+    required this.onActivate,
   });
 
   final AccountModel account;
   final VoidCallback onTap;
   final VoidCallback? onDeactivate;
+  final VoidCallback? onActivate;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +93,13 @@ class AccountCard extends StatelessWidget {
                   icon: const Icon(Icons.block_rounded),
                   color: Colors.red.shade400,
                   tooltip: 'Vô hiệu hóa',
+                ),
+              if (!isActive && onActivate != null)
+                IconButton(
+                  onPressed: onActivate,
+                  icon: const Icon(Icons.settings_backup_restore_rounded),
+                  color: Colors.green.shade600,
+                  tooltip: 'Khôi phục tài khoản',
                 ),
               Icon(
                 Icons.chevron_right_rounded,

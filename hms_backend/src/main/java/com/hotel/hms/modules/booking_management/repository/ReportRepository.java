@@ -1,4 +1,4 @@
-package com.hotel.hms.repository;
+package com.hotel.hms.modules.booking_management.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-import com.hotel.hms.dto.report.RevenueReport.MonthlyData;
-import com.hotel.hms.dto.report.CostReport;
-import com.hotel.hms.dto.report.FeedbackReport.FeedbackItem;
+import com.hotel.hms.modules.booking_management.dto.report.RevenueReport.MonthlyData;
+import com.hotel.hms.modules.booking_management.dto.report.CostReport;
+import com.hotel.hms.modules.booking_management.dto.report.FeedbackReport.FeedbackItem;
 
 @Repository
 public class ReportRepository {

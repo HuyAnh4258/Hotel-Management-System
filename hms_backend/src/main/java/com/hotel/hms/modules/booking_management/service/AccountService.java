@@ -1,20 +1,22 @@
-package com.hotel.hms.service;
+package com.hotel.hms.modules.booking_management.service;
 
-import com.hotel.hms.dto.AccountResponse;
-import com.hotel.hms.dto.CreateAccountRequest;
-import com.hotel.hms.dto.UpdateAccountRequest;
-import com.hotel.hms.entity.EmployeeProfile;
-import com.hotel.hms.entity.Role;
-import com.hotel.hms.entity.UserAccount;
-import com.hotel.hms.repository.EmployeeProfileRepository;
-import com.hotel.hms.repository.RoleRepository;
-import com.hotel.hms.repository.UserAccountRepository;
+import com.hotel.hms.modules.booking_management.dto.AccountResponse;
+import com.hotel.hms.modules.booking_management.dto.CreateAccountRequest;
+import com.hotel.hms.modules.booking_management.dto.UpdateAccountRequest;
+import com.hotel.hms.modules.employee_management.entity.EmployeeProfile;
+import com.hotel.hms.modules.authentication.entity.Role;
+import com.hotel.hms.modules.booking_management.entity.UserAccount;
+import com.hotel.hms.modules.employee_management.repository.EmployeeProfileRepository;
+import com.hotel.hms.modules.authentication.repository.RoleRepository;
+import com.hotel.hms.modules.booking_management.repository.UserAccountRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -220,9 +222,44 @@ public class AccountService {
         return toAccountResponse(user);
     }
 
+    // ========== ACTIVATE (RESTORE) ==========
+
+    @Transactional
+    public AccountResponse activateAccount(String userId) {
+        UserAccount user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+        validateManageableRole(user);
+
+        user.setIsActive(true);
+        userRepository.save(user);
+
+        return toAccountResponse(user);
+    }
+
     // ========== HELPERS ==========
 
+    private String getCurrentUserUsername() {
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            return null;
+        }
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername();
+        }
+        if (principal instanceof String) {
+            return (String) principal;
+        }
+        return null;
+    }
+
     private void validateManageableRole(UserAccount user) {
+        // Cho phép user cập nhật thông tin của chính mình (self-update)
+        String currentUserId = getCurrentUserUsername(); // Trả về userId do JwtAuthFilter đặt vào principal.username
+        if (currentUserId != null && currentUserId.equalsIgnoreCase(user.getUserId())) {
+            return;
+        }
+
         boolean hasManageableRole = user.getRoles().stream()
                 .anyMatch(role -> MANAGEABLE_ROLES.contains(role.getRoleName()));
         if (!hasManageableRole) {

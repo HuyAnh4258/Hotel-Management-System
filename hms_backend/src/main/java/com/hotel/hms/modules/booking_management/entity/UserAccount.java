@@ -1,4 +1,4 @@
-package com.hotel.hms.entity;
+package com.hotel.hms.modules.booking_management.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +15,8 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.hotel.hms.modules.authentication.entity.Role;
+import com.hotel.hms.modules.employee_management.entity.EmployeeProfile;
 
 /**
  * JPA Entity for the `User` table.

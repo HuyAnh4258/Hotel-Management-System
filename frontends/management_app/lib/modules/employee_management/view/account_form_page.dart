@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -25,7 +27,6 @@ class _AccountFormPageState extends State<AccountFormPage> {
 
   String _selectedRole = 'RECEPTIONIST';
   bool _submitting = false;
-  bool _obscurePassword = true;
 
   bool get _isEditMode => widget.account != null;
 
@@ -34,6 +35,29 @@ class _AccountFormPageState extends State<AccountFormPage> {
     'SERVICE_STAFF': 'Nhân viên phục vụ',
     'HOUSEKEEPER': 'Nhân viên buồng phòng',
   };
+
+  String _generateSecurePassword() {
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const digits = '0123456789';
+    const specials = r'@#$%&*!';
+    
+    final r = Random.secure();
+    final charList = [
+      upper[r.nextInt(upper.length)],
+      lower[r.nextInt(lower.length)],
+      digits[r.nextInt(digits.length)],
+      specials[r.nextInt(specials.length)],
+    ];
+    
+    const allChars = '$upper$lower$digits$specials';
+    for (var i = 0; i < 6; i++) {
+      charList.add(allChars[r.nextInt(allChars.length)]);
+    }
+    
+    charList.shuffle(r);
+    return charList.join();
+  }
 
   @override
   void initState() {
@@ -49,6 +73,9 @@ class _AccountFormPageState extends State<AccountFormPage> {
       _selectedRole = _roleOptions.containsKey(a.roleName.toUpperCase())
           ? a.roleName.toUpperCase()
           : 'RECEPTIONIST';
+    } else {
+      // Sinh mật khẩu ngẫu nhiên thỏa mãn validation khi tạo tài khoản mới
+      _passwordController.text = _generateSecurePassword();
     }
   }
 
@@ -80,9 +107,8 @@ class _AccountFormPageState extends State<AccountFormPage> {
             salary: _salaryController.text.trim().isNotEmpty
                 ? double.tryParse(_salaryController.text.trim())
                 : null,
-            password: _passwordController.text.trim().isNotEmpty
-                ? _passwordController.text.trim()
-                : null,
+            // Không truyền password khi edit (được quản lý riêng bởi User qua Quên mật khẩu)
+            password: null,
           ),
         );
       } else {
@@ -267,45 +293,41 @@ class _AccountFormPageState extends State<AccountFormPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Password
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: _isEditMode
-                          ? 'Mật khẩu mới (để trống nếu không đổi)'
-                          : 'Mật khẩu',
-                      prefixIcon: const Icon(Icons.lock_rounded),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.95),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
+                  // Password (Chỉ hiển thị khi tạo mới, dạng Read-only và cho phép copy)
+                  if (!_isEditMode) ...[
+                    TextFormField(
+                      controller: _passwordController,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: 'Mật khẩu tạm thời (Tự động sinh)',
+                        helperText: 'Nhân viên sẽ dùng chức năng Quên mật khẩu để đổi lại',
+                        prefixIcon: const Icon(Icons.lock_rounded),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
                         ),
-                        onPressed: () {
-                          setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          );
-                        },
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.copy_rounded),
+                          tooltip: 'Sao chép mật khẩu',
+                          onPressed: () {
+                            Clipboard.setData(
+                              ClipboardData(text: _passwordController.text),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Đã sao chép mật khẩu tạm thời vào Clipboard',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    validator: (v) {
-                      if (!_isEditMode && (v == null || v.trim().isEmpty)) {
-                        return 'Nhập mật khẩu';
-                      }
-                      if (v != null && v.trim().isNotEmpty && v.trim().length < 6) {
-                        return 'Mật khẩu tối thiểu 6 ký tự';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Full name
                   TextFormField(

@@ -1,4 +1,4 @@
-package com.hotel.hms.dto.report;
+package com.hotel.hms.modules.booking_management.dto.report;
 
 import java.util.List;
 

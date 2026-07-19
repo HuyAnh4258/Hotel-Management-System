@@ -1,4 +1,4 @@
-package com.hotel.hms.entity;
+package com.hotel.hms.modules.booking_management.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

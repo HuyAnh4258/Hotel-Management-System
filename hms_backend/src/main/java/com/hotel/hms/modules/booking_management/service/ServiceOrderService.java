@@ -1,8 +1,8 @@
-package com.hotel.hms.service;
+package com.hotel.hms.modules.booking_management.service;
 
-import com.hotel.hms.dto.OrderDTO;
-import com.hotel.hms.entity.ServiceOrder;
-import com.hotel.hms.repository.ServiceOrderRepository;
+import com.hotel.hms.modules.booking_management.dto.OrderDTO;
+import com.hotel.hms.modules.booking_management.entity.ServiceOrder;
+import com.hotel.hms.modules.booking_management.repository.ServiceOrderRepository;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

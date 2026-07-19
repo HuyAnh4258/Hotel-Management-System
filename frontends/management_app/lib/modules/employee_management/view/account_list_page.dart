@@ -106,6 +106,47 @@ class _AccountListPageState extends State<AccountListPage> {
     }
   }
 
+  Future<void> _activate(AccountModel account) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Khôi phục tài khoản'),
+        content: Text(
+          'Bạn có chắc muốn kích hoạt lại tài khoản "${account.fullName}" (@${account.username})?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Khôi phục'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await AccountApi.activateAccount(account.userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã khôi phục tài khoản thành công')),
+      );
+      _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -170,6 +211,7 @@ class _AccountListPageState extends State<AccountListPage> {
                 ),
               ),
               const SizedBox(height: 16),
+
 
               // Search bar
               TextField(
@@ -268,6 +310,9 @@ class _AccountListPageState extends State<AccountListPage> {
                               onTap: () => _navigateToEdit(account),
                               onDeactivate: account.isActive
                                   ? () => _deactivate(account)
+                                  : null,
+                              onActivate: !account.isActive
+                                  ? () => _activate(account)
                                   : null,
                             ),
                           ),

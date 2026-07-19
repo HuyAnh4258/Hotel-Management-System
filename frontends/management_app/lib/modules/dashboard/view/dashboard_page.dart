@@ -48,6 +48,24 @@ class _DashboardPageState extends State<DashboardPage>
           body: Center(child: CircularProgressIndicator()),
         );
       }
+      if (auth.hasAnyRole(['HOUSEKEEPER'])) {
+        // Redirect housekeeper to room list immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAllNamed('/housekeeper');
+        });
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (auth.hasAnyRole(['SERVICE_STAFF', 'STAFF'])) {
+        // Redirect service staff to order list immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAllNamed('/service-staff');
+        });
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
       if (auth.hasAnyRole(['OWNER'])) {
         final isWide = MediaQuery.of(context).size.width > 800;
         return Scaffold(
@@ -99,8 +117,8 @@ class _DashboardPageState extends State<DashboardPage>
           'Doanh thu, lợi nhuận, tỉ lệ lấp đầy',
           Icons.analytics_outlined,
           AppColors.info,
-          false,
-          null,
+          true,
+          () => Get.toNamed('/owner-dashboard'),
         ),
         const SizedBox(height: 12),
         _ownerCard(
@@ -177,65 +195,74 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       actions: [
         Obx(
-          () => Container(
-            margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Center(
-                    child: Text(
-                      (auth.fullName.value.isNotEmpty
-                              ? auth.fullName.value
-                              : auth.username.value.isNotEmpty
-                              ? auth.username.value
-                              : 'U')[0]
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+          () => GestureDetector(
+            onTap: () => Get.toNamed('/profile'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (auth.fullName.value.isNotEmpty
+                                ? auth.fullName.value
+                                : auth.username.value.isNotEmpty
+                                ? auth.username.value
+                                : 'U')[0]
+                            .toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      auth.fullName.value.isNotEmpty
-                          ? auth.fullName.value
-                          : auth.username.value.isNotEmpty
-                          ? auth.username.value
-                          : 'User',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        auth.fullName.value.isNotEmpty
+                            ? auth.fullName.value
+                            : auth.username.value.isNotEmpty
+                            ? auth.username.value
+                            : 'User',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _roleLabel(auth.roles.firstOrNull ?? ''),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white60,
+                      Text(
+                        _roleLabel(auth.roles.firstOrNull ?? ''),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: Colors.white60,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.edit_outlined,
+                    size: 13,
+                    color: Colors.white54,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

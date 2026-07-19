@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 
+import 'package:hms_shared/auth/token_storage.dart';
+
 /// API client and data models for Account Management.
 class AccountApi {
   AccountApi._();
@@ -20,7 +22,17 @@ class AccountApi {
     BaseOptions(
       headers: {'Content-Type': 'application/json'},
     ),
-  );
+  )..interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await TokenStorage().getAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+      ),
+    );
 
   /// GET /api/accounts?search=&role=
   static Future<List<AccountModel>> getAccounts({
@@ -71,6 +83,14 @@ class AccountApi {
   /// PUT /api/accounts/{id}/deactivate
   static Future<AccountModel> deactivateAccount(String id) async {
     final response = await _dio.put('$_baseUrl/$id/deactivate');
+    return AccountModel.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  /// PUT /api/accounts/{id}/activate
+  static Future<AccountModel> activateAccount(String id) async {
+    final response = await _dio.put('$_baseUrl/$id/activate');
     return AccountModel.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );

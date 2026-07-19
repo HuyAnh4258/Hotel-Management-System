@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.hotel.hms.modules.booking_management.entity.UserAccount;
 
 @Entity
 @Table(name = "EmployeeProfile")
@@ -17,6 +18,11 @@ public class EmployeeProfile {
     @Id
     @Column(name = "UserId", length = 12, nullable = false)
     private String userId;
+
+    @MapsId
+    @OneToOne
+    @JoinColumn(name = "UserId")
+    private UserAccount user;
 
     @Column(name = "EmployeeId", length = 12, nullable = false, unique = true)
     private String employeeId;

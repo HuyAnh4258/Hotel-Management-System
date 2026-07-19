@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../viewmodel/order_viewmodel.dart';
 
@@ -53,6 +54,13 @@ class _OrderListPageState extends State<OrderListPage>
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded),
+            tooltip: 'Hồ sơ cá nhân',
+            onPressed: () => Get.toNamed('/profile'),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

@@ -1,10 +1,10 @@
-package com.hotel.hms.controller;
+package com.hotel.hms.modules.booking_management.controller;
 
-import com.hotel.hms.dto.report.CostReport;
-import com.hotel.hms.dto.report.FeedbackReport;
-import com.hotel.hms.dto.report.OccupancyReport;
-import com.hotel.hms.dto.report.RevenueReport;
-import com.hotel.hms.service.ReportService;
+import com.hotel.hms.modules.booking_management.dto.report.CostReport;
+import com.hotel.hms.modules.booking_management.dto.report.FeedbackReport;
+import com.hotel.hms.modules.booking_management.dto.report.OccupancyReport;
+import com.hotel.hms.modules.booking_management.dto.report.RevenueReport;
+import com.hotel.hms.modules.booking_management.service.ReportService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
