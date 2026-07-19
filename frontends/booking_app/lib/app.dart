@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'modules/booking/view/booking_home_page.dart';
+import 'modules/booking/view/intro_page.dart';
 import 'modules/auth/view/login_page.dart';
 import 'modules/auth/view/splash_page.dart';
 import 'modules/auth/viewmodel/auth_viewmodel.dart';
@@ -17,10 +18,11 @@ class BookingApp extends StatelessWidget {
       initialBinding: BindingsBuilder(() {
         Get.put(AuthViewModel(), permanent: true);
       }),
-      initialRoute: '/dashboard',
+      initialRoute: '/intro',
       getPages: [
         GetPage(name: '/splash', page: () => const SplashPage()),
         GetPage(name: '/login', page: () => const LoginPage()),
+        GetPage(name: '/intro', page: () => const IntroPage()),
         GetPage(name: '/dashboard', page: () => const BookingHomePage()),
       ],
       theme: ThemeData(
