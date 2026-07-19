@@ -13,28 +13,12 @@ class ServicesPage extends StatefulWidget {
   State<ServicesPage> createState() => _ServicesPageState();
 }
 
-class _ServicesPageState extends State<ServicesPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _fade;
-
+class _ServicesPageState extends State<ServicesPage> {
   final _searchCtrl = TextEditingController();
   String _selectedFilter = 'ALL'; // 'ALL', 'SINGLE', 'COMPOSITE'
 
   @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _ctrl.forward();
-  }
-
-  @override
   void dispose() {
-    _ctrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -49,7 +33,6 @@ class _ServicesPageState extends State<ServicesPage>
   Widget build(BuildContext context) {
     final svm = Get.find<ServiceViewModel>();
     final ivm = Get.find<InventoryViewModel>();
-    final isWide = MediaQuery.of(context).size.width > 700;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -74,73 +57,158 @@ class _ServicesPageState extends State<ServicesPage>
       ),
       body: Column(
         children: [
-          _buildSummary(svm, isWide),
-          _buildSearchBar(),
+          // Filter Row
           _buildFilterBar(),
-          Expanded(child: _buildServiceList(svm, ivm)),
+          // Search Bar
+          _buildSearchBar(),
+          // Service List
+          Expanded(
+            child: Obx(() {
+              if (svm.isLoading.value && svm.items.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+
+              final filtered = svm.items.where((s) {
+                // Search query filter
+                if (_searchCtrl.text.isNotEmpty) {
+                  final q = _searchCtrl.text.toLowerCase();
+                  if (!s.serviceName.toLowerCase().contains(q) &&
+                      !(s.description ?? '').toLowerCase().contains(q)) {
+                    return false;
+                  }
+                }
+                // Type filter
+                if (_selectedFilter == 'SINGLE' && s.isComposite) return false;
+                if (_selectedFilter == 'COMPOSITE' && !s.isComposite) return false;
+                return s.isActive;
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return RefreshIndicator(
+                color: AppColors.accent,
+                onRefresh: () async {
+                  await svm.fetchServices();
+                  await ivm.fetchItems();
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: filtered.length,
+                  itemBuilder: (_, i) => _buildServiceCard(filtered[i], svm, ivm),
+                ),
+              );
+            }),
+          ),
         ],
       ),
     );
   }
 
+<<<<<<< Updated upstream
+  Widget _buildFilterBar() {
+    final filters = [
+      {'value': 'ALL', 'label': 'Tất cả'},
+      {'value': 'SINGLE', 'label': 'Đơn lẻ'},
+      {'value': 'COMPOSITE', 'label': 'Gói phức hợp'},
+    ];
+
+    return Container(
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: filters.length,
+        itemBuilder: (context, i) {
+          final f = filters[i];
+          final isSel = _selectedFilter == f['value'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(
+                f['label']!,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  color: isSel ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+              selected: isSel,
+              selectedColor: AppColors.primary,
+              checkmarkColor: Colors.white,
+              backgroundColor: AppColors.surface,
+              onSelected: (_) {
+                setState(() {
+                  _selectedFilter = f['value']!;
+                });
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+=======
   // ─── Summary cards ──────────────────────────────────────────────
 
   Widget _buildSummary(ServiceViewModel svm, bool isWide) {
     return FadeTransition(
       opacity: _fade,
-      child: Obx(
-        () {
-          final active = svm.items.where((s) => s.isActive).toList();
-          final single = active.where((s) => !s.isComposite).length;
-          final composite = active.where((s) => s.isComposite).length;
-          final priced = active.where((s) => s.isPriced).length;
+      child: Obx(() {
+        final active = svm.items.where((s) => s.isActive).toList();
+        final single = active.where((s) => !s.isComposite).length;
+        final composite = active.where((s) => s.isComposite).length;
+        final priced = active.where((s) => s.isPriced).length;
 
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _summaryCard(
-                    'Tổng dịch vụ',
-                    '${active.length}',
-                    Icons.room_service_outlined,
-                    AppColors.info,
-                  ),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _summaryCard(
+                  'Tổng dịch vụ',
+                  '${active.length}',
+                  Icons.room_service_outlined,
+                  AppColors.info,
                 ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _summaryCard(
+                  'Đơn lẻ',
+                  '$single',
+                  Icons.fiber_manual_record_outlined,
+                  AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _summaryCard(
+                  'Phức hợp',
+                  '$composite',
+                  Icons.widgets_outlined,
+                  AppColors.warning,
+                ),
+              ),
+              if (isWide) ...[
                 const SizedBox(width: 10),
                 Expanded(
                   child: _summaryCard(
-                    'Đơn lẻ',
-                    '$single',
-                    Icons.fiber_manual_record_outlined,
-                    AppColors.primary,
+                    'Đã đặt giá',
+                    '$priced',
+                    Icons.monetization_on_outlined,
+                    AppColors.success,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _summaryCard(
-                    'Phức hợp',
-                    '$composite',
-                    Icons.widgets_outlined,
-                    AppColors.warning,
-                  ),
-                ),
-                if (isWide) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _summaryCard(
-                      'Đã đặt giá',
-                      '$priced',
-                      Icons.monetization_on_outlined,
-                      AppColors.success,
-                    ),
-                  ),
-                ],
               ],
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -152,7 +220,7 @@ class _ServicesPageState extends State<ServicesPage>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -164,7 +232,7 @@ class _ServicesPageState extends State<ServicesPage>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 22, color: color),
@@ -197,13 +265,13 @@ class _ServicesPageState extends State<ServicesPage>
 
   // ─── Search bar ───────────────────────────────────────────────
 
+>>>>>>> Stashed changes
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: TextField(
         controller: _searchCtrl,
         onChanged: (_) => setState(() {}),
-        style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search, size: 20),
           hintText: 'Tìm kiếm dịch vụ...',
@@ -222,13 +290,23 @@ class _ServicesPageState extends State<ServicesPage>
     );
   }
 
+<<<<<<< Updated upstream
+=======
   // ─── Filter chips ─────────────────────────────────────────────
 
   Widget _buildFilterBar() {
     final filters = [
       {'value': 'ALL', 'label': 'Tất cả', 'icon': Icons.apps_rounded},
-      {'value': 'SINGLE', 'label': 'Đơn lẻ', 'icon': Icons.fiber_manual_record_outlined},
-      {'value': 'COMPOSITE', 'label': 'Gói phức hợp', 'icon': Icons.widgets_outlined},
+      {
+        'value': 'SINGLE',
+        'label': 'Đơn lẻ',
+        'icon': Icons.fiber_manual_record_outlined,
+      },
+      {
+        'value': 'COMPOSITE',
+        'label': 'Gói phức hợp',
+        'icon': Icons.widgets_outlined,
+      },
     ];
 
     return Padding(
@@ -247,7 +325,10 @@ class _ServicesPageState extends State<ServicesPage>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 9,
+                ),
                 decoration: BoxDecoration(
                   color: isSel ? AppColors.primary : AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
@@ -257,7 +338,7 @@ class _ServicesPageState extends State<ServicesPage>
                   boxShadow: isSel
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.25),
+                            color: AppColors.primary.withValues(alpha: 0.25),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -337,39 +418,59 @@ class _ServicesPageState extends State<ServicesPage>
 
   // ─── Empty state ──────────────────────────────────────────────
 
+>>>>>>> Stashed changes
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+<<<<<<< Updated upstream
+          Icon(Icons.room_service_outlined, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+          const SizedBox(height: 16),
+          const Text(
+            'Không tìm thấy dịch vụ nào',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+=======
           Container(
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.textHint.withOpacity(0.08),
+              color: AppColors.textHint.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: Icon(Icons.room_service_outlined,
-                size: 40, color: AppColors.textHint.withOpacity(0.4)),
+            child: Icon(
+              Icons.room_service_outlined,
+              size: 40,
+              color: AppColors.textHint.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: 16),
           const Text(
             'Không tìm thấy dịch vụ nào',
             style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textSecondary),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
             'Nhấn + để thêm mới',
             style: TextStyle(fontSize: 13, color: AppColors.textHint),
+>>>>>>> Stashed changes
           ),
         ],
       ),
     );
   }
 
+<<<<<<< Updated upstream
+  Widget _buildServiceCard(ServiceItem s, ServiceViewModel svm, InventoryViewModel ivm) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+=======
   // ─── Service card (inventory-style) ───────────────────────────
 
   Color _serviceColor(ServiceItem s) {
@@ -379,7 +480,10 @@ class _ServicesPageState extends State<ServicesPage>
   }
 
   Widget _buildServiceCard(
-      ServiceItem s, ServiceViewModel svm, InventoryViewModel ivm) {
+    ServiceItem s,
+    ServiceViewModel svm,
+    InventoryViewModel ivm,
+  ) {
     final color = _serviceColor(s);
 
     return Padding(
@@ -388,7 +492,7 @@ class _ServicesPageState extends State<ServicesPage>
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.06),
+        shadowColor: Colors.black.withValues(alpha: 0.06),
         child: InkWell(
           onTap: () => _showServiceActions(s, svm, ivm),
           borderRadius: BorderRadius.circular(16),
@@ -408,7 +512,7 @@ class _ServicesPageState extends State<ServicesPage>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Icon(
@@ -441,8 +545,9 @@ class _ServicesPageState extends State<ServicesPage>
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary),
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                         ],
@@ -460,13 +565,19 @@ class _ServicesPageState extends State<ServicesPage>
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right,
-                        size: 20, color: AppColors.textHint),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppColors.textHint,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 const Divider(
-                    height: 1, thickness: 0.5, color: AppColors.border),
+                  height: 1,
+                  thickness: 0.5,
+                  color: AppColors.border,
+                ),
                 const SizedBox(height: 8),
                 // Bottom info row
                 Row(
@@ -494,7 +605,9 @@ class _ServicesPageState extends State<ServicesPage>
                       StatusChip(label: 'ĐÃ ĐẶT GIÁ', color: AppColors.success)
                     else
                       StatusChip(
-                          label: 'CHƯA ĐẶT GIÁ', color: AppColors.textHint),
+                        label: 'CHƯA ĐẶT GIÁ',
+                        color: AppColors.textHint,
+                      ),
                   ],
                 ),
               ],
@@ -505,21 +618,29 @@ class _ServicesPageState extends State<ServicesPage>
     );
   }
 
-  Widget _infoChip(IconData icon, String label, String value,
-      [Color? valueColor]) {
+  Widget _infoChip(
+    IconData icon,
+    String label,
+    String value, [
+    Color? valueColor,
+  ]) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: AppColors.textSecondary),
         const SizedBox(width: 4),
-        Text("$label: ",
-            style: const TextStyle(
-                fontSize: 12, color: AppColors.textSecondary)),
-        Text(value,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: valueColor ?? AppColors.textPrimary)),
+        Text(
+          "$label: ",
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? AppColors.textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -527,30 +648,55 @@ class _ServicesPageState extends State<ServicesPage>
   // ─── Bottom sheet actions (inventory-style) ───────────────────
 
   void _showServiceActions(
-      ServiceItem s, ServiceViewModel svm, InventoryViewModel ivm) {
+    ServiceItem s,
+    ServiceViewModel svm,
+    InventoryViewModel ivm,
+  ) {
     Get.bottomSheet(
       Container(
         decoration: const BoxDecoration(
+>>>>>>> Stashed changes
           color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 5,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(3),
+                      color: (s.isComposite ? AppColors.info : AppColors.primary).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      s.isComposite ? Icons.widgets_outlined : Icons.room_service,
+                      color: s.isComposite ? AppColors.info : AppColors.primary,
+                      size: 22,
                     ),
                   ),
+<<<<<<< Updated upstream
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+=======
                 ),
                 const SizedBox(height: 24),
                 // Header with service info
@@ -560,8 +706,9 @@ class _ServicesPageState extends State<ServicesPage>
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: (s.isComposite ? AppColors.info : AppColors.primary)
-                            .withOpacity(0.08),
+                        color:
+                            (s.isComposite ? AppColors.info : AppColors.primary)
+                                .withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
@@ -569,8 +716,9 @@ class _ServicesPageState extends State<ServicesPage>
                             ? Icons.widgets_outlined
                             : Icons.room_service,
                         size: 26,
-                        color:
-                            s.isComposite ? AppColors.info : AppColors.primary,
+                        color: s.isComposite
+                            ? AppColors.info
+                            : AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -589,26 +737,45 @@ class _ServicesPageState extends State<ServicesPage>
                           if (s.description != null &&
                               s.description!.isNotEmpty) ...[
                             const SizedBox(height: 2),
+>>>>>>> Stashed changes
                             Text(
-                              s.description!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                              s.serviceName,
                               style: const TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: AppColors.textHint,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: (s.isComposite ? AppColors.info : AppColors.textHint).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                s.isComposite ? 'Gói phức hợp' : 'Đơn lẻ',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: s.isComposite ? AppColors.info : AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ],
+                        ),
+                        if (s.description != null && s.description!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Giá: ${s.isPriced ? '${_fmt(s.unitPrice!)}đ' : 'Chưa đặt'}  |  Loại: ${s.isComposite ? 'Phức hợp' : 'Đơn lẻ'}',
+                            s.description!,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               color: AppColors.textSecondary,
                             ),
                           ),
                         ],
+<<<<<<< Updated upstream
+=======
                       ),
                     ),
                   ],
@@ -622,7 +789,7 @@ class _ServicesPageState extends State<ServicesPage>
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.background.withOpacity(0.5),
+                      color: AppColors.background.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
@@ -644,59 +811,110 @@ class _ServicesPageState extends State<ServicesPage>
                           children: s.recipeItems!.map((item) {
                             return Chip(
                               label: Text(
-                                  '${item.itemName} x${item.quantityRequired}'),
+                                '${item.itemName} x${item.quantityRequired}',
+                              ),
                               padding: EdgeInsets.zero,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                               labelStyle: const TextStyle(
-                                  fontSize: 11, color: AppColors.textPrimary),
+                                fontSize: 11,
+                                color: AppColors.textPrimary,
+                              ),
                               backgroundColor: AppColors.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                side:
-                                    const BorderSide(color: AppColors.border),
+                                side: const BorderSide(color: AppColors.border),
                               ),
                             );
                           }).toList(),
                         ),
+>>>>>>> Stashed changes
                       ],
                     ),
                   ),
-                ],
-                const SizedBox(height: 20),
-                // Action section
-                const Text(
-                  "Quản lý",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textHint,
-                    letterSpacing: 0.5,
+                  Text(
+                    s.unitPrice != null ? '${_fmt(s.unitPrice!)}đ' : 'Chưa đặt giá',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _actionRow(
-                  Icons.edit_outlined,
-                  'Sửa dịch vụ',
-                  'Thay đổi tên, mô tả, giá bán hoặc định mức vật tư',
-                  AppColors.info,
-                  () {
-                    Get.back();
-                    _showServiceDialog(svm, ivm, existing: s);
-                  },
-                ),
-                _actionRow(
-                  Icons.delete_outline,
-                  'Vô hiệu hoá',
-                  'Tạm ngừng dịch vụ này (có thể khôi phục sau)',
-                  AppColors.danger,
-                  () {
-                    Get.back();
-                    _confirmDeactivate(s, svm);
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
+<<<<<<< Updated upstream
+            // Recipe items preview (if composite)
+            if (s.isComposite && s.recipeItems != null && s.recipeItems!.isNotEmpty) ...[
+              const Divider(height: 1, color: AppColors.border),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                color: AppColors.background.withOpacity(0.4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Vật tư tiêu hao định mức:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: s.recipeItems!.map((item) {
+                        return Chip(
+                          label: Text('${item.itemName} x${item.quantityRequired}'),
+                          padding: EdgeInsets.zero,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          labelStyle: const TextStyle(fontSize: 11, color: AppColors.textPrimary),
+                          backgroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: const BorderSide(color: AppColors.border),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const Divider(height: 1, color: AppColors.border),
+            // Actions row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _showServiceDialog(svm, ivm, existing: s),
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Sửa'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _confirmDeactivate(s, svm),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Xoá'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+=======
           ),
         ),
       ),
@@ -722,7 +940,7 @@ class _ServicesPageState extends State<ServicesPage>
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 22, color: color),
@@ -736,7 +954,9 @@ class _ServicesPageState extends State<ServicesPage>
             child: Text(
               subtitle,
               style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary),
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           trailing: const Icon(
@@ -748,61 +968,82 @@ class _ServicesPageState extends State<ServicesPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 4,
+          ),
+>>>>>>> Stashed changes
         ),
       ),
     );
   }
 
-  // ─── Confirm deactivate ───────────────────────────────────────
-
   void _confirmDeactivate(ServiceItem s, ServiceViewModel svm) {
     Get.dialog(
       AlertDialog(
         title: const Text('Xoá dịch vụ'),
-        content:
-            Text('Bạn có chắc muốn vô hiệu hoá dịch vụ "${s.serviceName}"?'),
+<<<<<<< Updated upstream
+        content: Text('Bạn có chắc muốn vô hiệu hoá dịch vụ "${s.serviceName}"?'),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Huỷ',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Huỷ', style: TextStyle(color: AppColors.textSecondary)),
+=======
+        content: Text(
+          'Bạn có chắc muốn vô hiệu hoá dịch vụ "${s.serviceName}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'Huỷ',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+>>>>>>> Stashed changes
           ),
           ElevatedButton(
             onPressed: () async {
               Get.back();
               final err = await svm.deactivateService(s.serviceId);
               if (err == null) {
-                Get.snackbar('Thành công', 'Đã xoá dịch vụ',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: AppColors.success,
-                    colorText: Colors.white);
+                Get.snackbar(
+                  'Thành công',
+                  'Đã xoá dịch vụ',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: AppColors.success,
+                  colorText: Colors.white,
+                );
               } else {
-                Get.snackbar('Lỗi', err,
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: AppColors.danger,
-                    colorText: Colors.white);
+                Get.snackbar(
+                  'Lỗi',
+                  err,
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: AppColors.danger,
+                  colorText: Colors.white,
+                );
               }
             },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child:
-                const Text('Xoá', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Xoá', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
+<<<<<<< Updated upstream
+  void _showServiceDialog(ServiceViewModel svm, InventoryViewModel ivm, {ServiceItem? existing}) {
+=======
   // ─── Service add/edit dialog ──────────────────────────────────
 
-  void _showServiceDialog(ServiceViewModel svm, InventoryViewModel ivm,
-      {ServiceItem? existing}) {
-    final nameCtrl =
-        TextEditingController(text: existing?.serviceName ?? '');
-    final descCtrl =
-        TextEditingController(text: existing?.description ?? '');
+  void _showServiceDialog(
+    ServiceViewModel svm,
+    InventoryViewModel ivm, {
+    ServiceItem? existing,
+  }) {
+>>>>>>> Stashed changes
+    final nameCtrl = TextEditingController(text: existing?.serviceName ?? '');
+    final descCtrl = TextEditingController(text: existing?.description ?? '');
     final priceCtrl = TextEditingController(
       text: existing?.unitPrice != null ? _fmt(existing!.unitPrice!) : '',
     );
@@ -815,19 +1056,21 @@ class _ServicesPageState extends State<ServicesPage>
     final recipeItems = <Map<String, dynamic>>[].obs;
 
     if (existing?.recipeItems != null) {
-      recipeItems.addAll(existing!.recipeItems!.map((item) => {
+      recipeItems.addAll(
+        existing!.recipeItems!.map(
+          (item) => {
             'itemId': item.itemId,
             'itemName': item.itemName,
             'quantityRequired': item.quantityRequired,
-          }));
+          },
+        ),
+      );
     }
 
     Get.dialog(
       Dialog(
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: SingleChildScrollView(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 450),
@@ -845,13 +1088,11 @@ class _ServicesPageState extends State<ServicesPage>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.info.withOpacity(0.15),
+                            color: AppColors.info.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
-                            isEdit
-                                ? Icons.edit_outlined
-                                : Icons.add_circle_outline,
+                            isEdit ? Icons.edit_outlined : Icons.add_circle_outline,
                             color: AppColors.info,
                             size: 22,
                           ),
@@ -874,8 +1115,7 @@ class _ServicesPageState extends State<ServicesPage>
                         labelText: 'Tên dịch vụ',
                         hintText: 'VD: Ăn sáng buffet, Giặt ủi...',
                       ),
-                      validator: (v) =>
-                          v!.trim().isEmpty ? 'Nhập tên dịch vụ' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Nhập tên dịch vụ' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -897,63 +1137,94 @@ class _ServicesPageState extends State<ServicesPage>
                       ),
                       validator: (v) {
                         if (v!.trim().isEmpty) return 'Nhập giá bán';
-                        if (double.tryParse(
-                                v.replaceAll(".", "").trim()) ==
-                            null) return 'Giá không hợp lệ';
+<<<<<<< Updated upstream
+                        if (double.tryParse(v.replaceAll(".", "").trim()) == null) return 'Giá không hợp lệ';
+=======
+                        if (double.tryParse(v.replaceAll(".", "").trim()) ==
+                            null) {
+                          return 'Giá không hợp lệ';
+                        }
+>>>>>>> Stashed changes
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
                     // Composite switch
+<<<<<<< Updated upstream
                     Obx(() => SwitchListTile(
                           title: const Text(
                             'Là dịch vụ phức hợp',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                           ),
                           subtitle: const Text(
                             'Bao gồm vật tư tiêu hao định mức từ kho',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+=======
+                    Obx(
+                      () => SwitchListTile(
+                        title: const Text(
+                          'Là dịch vụ phức hợp',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
-                          value: isComposite.value,
-                          activeColor: AppColors.primary,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) {
-                            isComposite.value = val;
-                          },
-                        )),
+                        ),
+                        subtitle: const Text(
+                          'Bao gồm vật tư tiêu hao định mức từ kho',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+>>>>>>> Stashed changes
+                          ),
+                        ),
+                        value: isComposite.value,
+                        activeThumbColor: AppColors.primary,
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (val) {
+                          isComposite.value = val;
+                        },
+                      ),
+                    ),
                     // Recipe items configuration
                     Obx(() {
                       if (!isComposite.value) return const SizedBox();
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Divider(
-                              height: 24, color: AppColors.border),
+                          const Divider(height: 24, color: AppColors.border),
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
                                 'Định mức Vật tư',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary),
+<<<<<<< Updated upstream
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                               ),
                               TextButton.icon(
-                                onPressed: () => _addRecipeItemDialog(
-                                    ivm, recipeItems),
+                                onPressed: () => _addRecipeItemDialog(ivm, recipeItems),
+                                icon: const Icon(Icons.add_circle_outline, size: 16),
+                                label: const Text('Thêm'),
+                                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+=======
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () =>
+                                    _addRecipeItemDialog(ivm, recipeItems),
                                 icon: const Icon(
-                                    Icons.add_circle_outline,
-                                    size: 16),
+                                  Icons.add_circle_outline,
+                                  size: 16,
+                                ),
                                 label: const Text('Thêm'),
                                 style: TextButton.styleFrom(
-                                    foregroundColor: AppColors.primary),
+                                  foregroundColor: AppColors.primary,
+                                ),
+>>>>>>> Stashed changes
                               ),
                             ],
                           ),
@@ -965,74 +1236,92 @@ class _ServicesPageState extends State<ServicesPage>
                               decoration: BoxDecoration(
                                 color: AppColors.background,
                                 borderRadius: BorderRadius.circular(12),
-                                border:
-                                    Border.all(color: AppColors.border),
+                                border: Border.all(color: AppColors.border),
                               ),
                               child: const Center(
                                 child: Text(
                                   'Chưa thêm vật tư nào',
+<<<<<<< Updated upstream
+                                  style: TextStyle(fontSize: 12, color: AppColors.textHint),
+=======
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textHint),
+                                    fontSize: 12,
+                                    color: AppColors.textHint,
+                                  ),
+>>>>>>> Stashed changes
                                 ),
                               ),
                             )
                           else
                             ListView.builder(
                               shrinkWrap: true,
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
+                              physics: const NeverScrollableScrollPhysics(),
                               itemCount: recipeItems.length,
                               itemBuilder: (context, idx) {
                                 final item = recipeItems[idx];
                                 return Container(
-                                  margin:
-                                      const EdgeInsets.only(bottom: 8),
+                                  margin: const EdgeInsets.only(bottom: 8),
+<<<<<<< Updated upstream
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+=======
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+>>>>>>> Stashed changes
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: AppColors.border),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.border),
                                   ),
                                   child: Row(
                                     children: [
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              item['itemName']
-                                                  as String,
+                                              item['itemName'] as String,
                                               style: const TextStyle(
+<<<<<<< Updated upstream
                                                   fontSize: 13,
-                                                  fontWeight:
-                                                      FontWeight.bold,
-                                                  color: AppColors
-                                                      .textPrimary),
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.textPrimary),
+=======
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textPrimary,
+                                              ),
+>>>>>>> Stashed changes
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
                                               'Số lượng cần: ${item['quantityRequired']}',
+<<<<<<< Updated upstream
+                                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+=======
                                               style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppColors
-                                                      .textSecondary),
+                                                fontSize: 12,
+                                                color: AppColors.textSecondary,
+                                              ),
+>>>>>>> Stashed changes
                                             ),
                                           ],
                                         ),
                                       ),
                                       IconButton(
+<<<<<<< Updated upstream
+                                        icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger, size: 20),
+                                        onPressed: () => recipeItems.removeAt(idx),
+=======
                                         icon: const Icon(
-                                            Icons
-                                                .remove_circle_outline,
-                                            color: AppColors.danger,
-                                            size: 20),
+                                          Icons.remove_circle_outline,
+                                          color: AppColors.danger,
+                                          size: 20,
+                                        ),
                                         onPressed: () =>
                                             recipeItems.removeAt(idx),
+>>>>>>> Stashed changes
                                       ),
                                     ],
                                   ),
@@ -1042,14 +1331,29 @@ class _ServicesPageState extends State<ServicesPage>
                         ],
                       );
                     }),
+<<<<<<< Updated upstream
                     Obx(() => svm.submitError.isNotEmpty
                         ? Padding(
                             padding: const EdgeInsets.only(top: 12),
                             child: Text(svm.submitError.value,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.danger)))
+                                style: const TextStyle(fontSize: 12, color: AppColors.danger)))
                         : const SizedBox()),
+=======
+                    Obx(
+                      () => svm.submitError.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Text(
+                                svm.submitError.value,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            )
+                          : const SizedBox(),
+                    ),
+>>>>>>> Stashed changes
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -1058,13 +1362,15 @@ class _ServicesPageState extends State<ServicesPage>
                             onPressed: () => Get.back(),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.textSecondary,
-                              side: const BorderSide(
-                                  color: AppColors.border),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 13),
+                              side: const BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+<<<<<<< Updated upstream
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+=======
                               shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(12)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+>>>>>>> Stashed changes
                             ),
                             child: const Text('Huỷ'),
                           ),
@@ -1074,21 +1380,31 @@ class _ServicesPageState extends State<ServicesPage>
                           flex: 2,
                           child: Obx(
                             () => PrimaryButton(
-                              label:
-                                  isEdit ? 'CẬP NHẬT' : 'THÊM MỚI',
+                              label: isEdit ? 'CẬP NHẬT' : 'THÊM MỚI',
                               isLoading: svm.isSubmitting.value,
                               onPressed: svm.isSubmitting.value
                                   ? null
                                   : () async {
-                                      if (!formKey.currentState!
-                                          .validate()) return;
+<<<<<<< Updated upstream
+                                      if (!formKey.currentState!.validate()) return;
                                       final itemsList = recipeItems
                                           .map((e) => {
-                                                'itemId':
-                                                    e['itemId'],
-                                                'quantityRequired':
-                                                    e['quantityRequired'],
+                                                'itemId': e['itemId'],
+                                                'quantityRequired': e['quantityRequired'],
                                               })
+=======
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
+                                      final itemsList = recipeItems
+                                          .map(
+                                            (e) => {
+                                              'itemId': e['itemId'],
+                                              'quantityRequired':
+                                                  e['quantityRequired'],
+                                            },
+                                          )
+>>>>>>> Stashed changes
                                           .toList();
 
                                       final err = isEdit
@@ -1096,38 +1412,53 @@ class _ServicesPageState extends State<ServicesPage>
                                               existing.serviceId,
                                               nameCtrl.text.trim(),
                                               descCtrl.text.trim(),
-                                              double.parse(priceCtrl
-                                                  .text
-                                                  .replaceAll(
-                                                      ".", "")
-                                                  .trim()),
+<<<<<<< Updated upstream
+                                              double.parse(priceCtrl.text.replaceAll(".", "").trim()),
+=======
+                                              double.parse(
+                                                priceCtrl.text
+                                                    .replaceAll(".", "")
+                                                    .trim(),
+                                              ),
+>>>>>>> Stashed changes
                                               isComposite.value,
                                               itemsList,
                                             )
                                           : await svm.createService(
                                               nameCtrl.text.trim(),
                                               descCtrl.text.trim(),
-                                              double.parse(priceCtrl
-                                                  .text
-                                                  .replaceAll(
-                                                      ".", "")
-                                                  .trim()),
+<<<<<<< Updated upstream
+                                              double.parse(priceCtrl.text.replaceAll(".", "").trim()),
+=======
+                                              double.parse(
+                                                priceCtrl.text
+                                                    .replaceAll(".", "")
+                                                    .trim(),
+                                              ),
+>>>>>>> Stashed changes
                                               isComposite.value,
                                               itemsList,
                                             );
 
                                       if (err == null) {
                                         Get.back();
-                                        Get.snackbar(
-                                            'Thành công',
-                                            isEdit
-                                                ? 'Đã cập nhật dịch vụ'
-                                                : 'Đã thêm dịch vụ mới',
-                                            snackPosition:
-                                                SnackPosition.BOTTOM,
-                                            backgroundColor:
-                                                AppColors.success,
+<<<<<<< Updated upstream
+                                        Get.snackbar('Thành công',
+                                            isEdit ? 'Đã cập nhật dịch vụ' : 'Đã thêm dịch vụ mới',
+                                            snackPosition: SnackPosition.BOTTOM,
+                                            backgroundColor: AppColors.success,
                                             colorText: Colors.white);
+=======
+                                        Get.snackbar(
+                                          'Thành công',
+                                          isEdit
+                                              ? 'Đã cập nhật dịch vụ'
+                                              : 'Đã thêm dịch vụ mới',
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: AppColors.success,
+                                          colorText: Colors.white,
+                                        );
+>>>>>>> Stashed changes
                                       }
                                     },
                             ),
@@ -1145,8 +1476,14 @@ class _ServicesPageState extends State<ServicesPage>
     );
   }
 
+<<<<<<< Updated upstream
+  void _addRecipeItemDialog(InventoryViewModel ivm, RxList<Map<String, dynamic>> recipeItems) {
+=======
   void _addRecipeItemDialog(
-      InventoryViewModel ivm, RxList<Map<String, dynamic>> recipeItems) {
+    InventoryViewModel ivm,
+    RxList<Map<String, dynamic>> recipeItems,
+  ) {
+>>>>>>> Stashed changes
     InventoryItem? selItem;
     final qtyCtrl = TextEditingController(text: '1');
     final formKey = GlobalKey<FormState>();
@@ -1160,8 +1497,7 @@ class _ServicesPageState extends State<ServicesPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<InventoryItem>(
-                decoration:
-                    const InputDecoration(labelText: 'Vật tư'),
+                decoration: const InputDecoration(labelText: 'Vật tư'),
                 items: ivm.filteredItems.map((item) {
                   return DropdownMenuItem(
                     value: item,
@@ -1175,13 +1511,23 @@ class _ServicesPageState extends State<ServicesPage>
               TextFormField(
                 controller: qtyCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    labelText: 'Số lượng định mức'),
+<<<<<<< Updated upstream
+                decoration: const InputDecoration(labelText: 'Số lượng định mức'),
                 validator: (v) {
                   if (v!.trim().isEmpty) return 'Nhập số lượng';
                   final num = int.tryParse(v.trim());
-                  if (num == null || num <= 0)
+                  if (num == null || num <= 0) return 'Số lượng phải lớn hơn 0';
+=======
+                decoration: const InputDecoration(
+                  labelText: 'Số lượng định mức',
+                ),
+                validator: (v) {
+                  if (v!.trim().isEmpty) return 'Nhập số lượng';
+                  final num = int.tryParse(v.trim());
+                  if (num == null || num <= 0) {
                     return 'Số lượng phải lớn hơn 0';
+                  }
+>>>>>>> Stashed changes
                   return null;
                 },
               ),
@@ -1191,23 +1537,45 @@ class _ServicesPageState extends State<ServicesPage>
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Huỷ',
-                style: TextStyle(color: AppColors.textSecondary)),
+<<<<<<< Updated upstream
+            child: const Text('Huỷ', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
-              if (!formKey.currentState!.validate() ||
-                  selItem == null) return;
+              if (!formKey.currentState!.validate() || selItem == null) return;
               // Check if already added
-              final exists = recipeItems
-                  .any((e) => e['itemId'] == selItem!.itemId);
+              final exists = recipeItems.any((e) => e['itemId'] == selItem!.itemId);
               if (exists) {
                 Get.back();
-                Get.snackbar(
-                    'Lỗi', 'Vật tư này đã có trong danh mục định mức',
+                Get.snackbar('Lỗi', 'Vật tư này đã có trong danh mục định mức',
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: AppColors.danger,
                     colorText: Colors.white);
+=======
+            child: const Text(
+              'Huỷ',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (!formKey.currentState!.validate() || selItem == null) {
+                return;
+              }
+              // Check if already added
+              final exists = recipeItems.any(
+                (e) => e['itemId'] == selItem!.itemId,
+              );
+              if (exists) {
+                Get.back();
+                Get.snackbar(
+                  'Lỗi',
+                  'Vật tư này đã có trong danh mục định mức',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: AppColors.danger,
+                  colorText: Colors.white,
+                );
+>>>>>>> Stashed changes
                 return;
               }
 
@@ -1218,10 +1586,15 @@ class _ServicesPageState extends State<ServicesPage>
               });
               Get.back();
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
-            child: const Text('Xác nhận',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+<<<<<<< Updated upstream
+            child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
+=======
+            child: const Text(
+              'Xác nhận',
+              style: TextStyle(color: Colors.white),
+            ),
+>>>>>>> Stashed changes
           ),
         ],
       ),
@@ -1231,8 +1604,14 @@ class _ServicesPageState extends State<ServicesPage>
 
 class _ThousandsFormatter extends TextInputFormatter {
   @override
+<<<<<<< Updated upstream
+  TextEditingValue formatEditUpdate(TextEditingValue oldVal, TextEditingValue newVal) {
+=======
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldVal, TextEditingValue newVal) {
+    TextEditingValue oldVal,
+    TextEditingValue newVal,
+  ) {
+>>>>>>> Stashed changes
     if (newVal.text.isEmpty) return newVal;
     final numStr = newVal.text.replaceAll(".", "");
     final number = int.tryParse(numStr);

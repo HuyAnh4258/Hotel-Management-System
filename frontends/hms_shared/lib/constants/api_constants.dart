@@ -30,4 +30,9 @@ class ApiConstants {
   static const String services = '/services';
   static String serviceById(String id) => '/services/$id';
   static String servicePrice(String id) => '/services/$id/unit-price';
+
+  // Vouchers
+  static const String vouchers = '/vouchers';
+  static String voucherById(String id) => '/vouchers/$id';
+  static String voucherDeactivate(String id) => '/vouchers/$id/deactivate';
 }

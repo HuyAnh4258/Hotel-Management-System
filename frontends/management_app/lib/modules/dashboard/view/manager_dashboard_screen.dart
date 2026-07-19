@@ -60,7 +60,9 @@ class ManagerDashboardScreen extends StatelessWidget {
                     child: SizedBox(
                       height: 100,
                       child: Center(
-                        child: CircularProgressIndicator(color: AppColors.accent),
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                        ),
                       ),
                     ),
                   );
@@ -106,7 +108,8 @@ class ManagerDashboardScreen extends StatelessWidget {
 
   Widget _buildHeroBanner(AuthService auth) {
     final now = DateTime.now();
-    final dateStr = '${now.day.toString().padLeft(2, '0')}/'
+    final dateStr =
+        '${now.day.toString().padLeft(2, '0')}/'
         '${now.month.toString().padLeft(2, '0')}/'
         '${now.year}';
     final name = auth.fullName.value.isNotEmpty
@@ -116,8 +119,8 @@ class ManagerDashboardScreen extends StatelessWidget {
     final greeting = hour < 12
         ? 'Chào buổi sáng'
         : hour < 18
-            ? 'Chào buổi chiều'
-            : 'Chào buổi tối';
+        ? 'Chào buổi chiều'
+        : 'Chào buổi tối';
 
     return Container(
       width: double.infinity,
@@ -131,7 +134,7 @@ class ManagerDashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.25),
+            color: AppColors.primary.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -152,11 +155,16 @@ class ManagerDashboardScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: const Text(
                   'QUẢN LÝ',
@@ -182,11 +190,7 @@ class ManagerDashboardScreen extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'Hôm nay có vẻ là một ngày bận rộn. Hãy cùng kiểm tra các chỉ số vận hành bên dưới.',
-            style: TextStyle(
-              color: Colors.white60,
-              fontSize: 13,
-              height: 1.4,
-            ),
+            style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -195,7 +199,11 @@ class ManagerDashboardScreen extends StatelessWidget {
 
   // ─── Summary Section ──────────────────────────────────────────
 
-  Widget _buildSummaryGrid(ManagerDashboardViewModel vm, bool isWide, double width) {
+  Widget _buildSummaryGrid(
+    ManagerDashboardViewModel vm,
+    bool isWide,
+    double width,
+  ) {
     int cols = 2;
     double ratio = 1.35; // Lower ratio means taller card to prevent text overflow
 
@@ -279,7 +287,11 @@ class ManagerDashboardScreen extends StatelessWidget {
 
   // ─── Operational Section ──────────────────────────────────────
 
-  Widget _buildActionGrid(ManagerDashboardViewModel vm, bool isWide, double width) {
+  Widget _buildActionGrid(
+    ManagerDashboardViewModel vm,
+    bool isWide,
+    double width,
+  ) {
     int cols = 2;
     double ratio = 2.0;
 
@@ -401,7 +413,7 @@ class ManagerDashboardScreen extends StatelessWidget {
             margin: const EdgeInsets.only(right: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -510,7 +522,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.12),
+                    color: AppColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(

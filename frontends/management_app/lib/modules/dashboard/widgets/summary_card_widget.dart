@@ -27,7 +27,7 @@ class SummaryCardWidget extends StatelessWidget {
         border: Border(top: BorderSide(color: themeColor, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -59,7 +59,7 @@ class SummaryCardWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
+                      color: themeColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(icon, size: 16, color: themeColor),
