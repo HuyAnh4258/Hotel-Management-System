@@ -44,11 +44,21 @@ public class AuthService {
             throw new RuntimeException("Sai tên đăng nhập hoặc mật khẩu");
         }
 
-        List<String> roles = userRoleRepo.findByUser_UserId(user.getUserId()).stream()
+        List<UserRole> userRoles = userRoleRepo.findByUser_UserId(user.getUserId());
+        List<String> roles = userRoles.stream()
                 .map(ur -> ur.getRole().getRoleName())
                 .toList();
+        List<String> roleIds = userRoles.stream()
+                .map(ur -> ur.getRole().getRoleId())
+                .toList();
 
-        String fullName = resolveFullName(user.getUserId(), roles);
+        GuestProfile guestProfile = guestRepo.findByUser_UserId(user.getUserId()).orElse(null);
+        String fullName = guestProfile != null ? guestProfile.getFullName() : null;
+        if (fullName == null) {
+            fullName = resolveFullName(user.getUserId(), roles);
+        }
+        String phone = guestProfile != null ? guestProfile.getPhone() : null;
+        String email = user.getEmail();
         String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername(), roles);
 
         return LoginResponse.builder()
@@ -56,7 +66,10 @@ public class AuthService {
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .roles(roles)
+                .roleIds(roleIds)
                 .fullName(fullName)
+                .phone(phone)
+                .email(email)
                 .build();
     }
 
@@ -95,6 +108,7 @@ public class AuthService {
                 .build());
 
         List<String> roles = List.of("GUEST");
+        List<String> roleIds = List.of(guestRole.getRoleId());
         String token = jwtTokenProvider.generateToken(userId, user.getUsername(), roles);
 
         return LoginResponse.builder()
@@ -102,7 +116,10 @@ public class AuthService {
                 .userId(userId)
                 .username(user.getUsername())
                 .roles(roles)
+                .roleIds(roleIds)
                 .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .email(request.getEmail())
                 .build();
     }
 

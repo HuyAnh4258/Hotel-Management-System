@@ -19,10 +19,21 @@ class BookingApi {
     );
   }
 
-  static Future<List<BookingSummary>> getBookings({String? date}) async {
+  static Future<List<BookingSummary>> getBookings({
+    String? date,
+    String? userId,
+  }) async {
+    final queryParameters = <String, dynamic>{};
+    if (date != null && date.isNotEmpty) {
+      queryParameters['date'] = date;
+    }
+    if (userId != null && userId.isNotEmpty) {
+      queryParameters['userId'] = userId;
+    }
+
     final response = await _dio.get(
       '',
-      queryParameters: date == null ? null : {'date': date},
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     final data = response.data as List<dynamic>;
     return data
@@ -147,6 +158,7 @@ class CreateBookingPayload {
     required this.fullName,
     required this.phone,
     required this.email,
+    required this.userId,
     required this.roomTypeId,
     required this.roomId,
     required this.expectedCheckin,
@@ -156,6 +168,7 @@ class CreateBookingPayload {
   final String fullName;
   final String phone;
   final String email;
+  final String userId;
   final String roomTypeId;
   final String roomId;
   final String expectedCheckin;
@@ -165,6 +178,7 @@ class CreateBookingPayload {
     'guestName': fullName,
     'phone': phone,
     'email': email,
+    'userId': userId,
     'roomIds': [roomId],
     'expectedCheckin': expectedCheckin,
     'expectedCheckout': expectedCheckout,
@@ -288,27 +302,16 @@ class RoomTypeModel {
 
   factory RoomTypeModel.fromJson(Map<String, dynamic> json) {
     final name = json['typeName']?.toString() ?? json['name']?.toString() ?? '';
+    final imageUrl = json['imageUrl']?.toString() ?? json['imageURL']?.toString();
     return RoomTypeModel(
       roomTypeId: json['roomTypeId']?.toString() ?? '',
       name: name,
       description: json['description']?.toString() ?? '',
       basePrice: (json['basePrice'] as num?)?.toDouble() ?? 0,
-      imagePath: _imageForRoomType(name),
+      imagePath: (imageUrl != null && imageUrl.isNotEmpty)
+          ? imageUrl
+          : 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80',
     );
-  }
-
-  static String _imageForRoomType(String name) {
-    final normalized = name.toLowerCase().trim();
-    if (normalized.contains('suite')) {
-      return 'asset/images_booking/noi-that-phong-ngu-cao-cap-01.jpg';
-    }
-    if (normalized.contains('deluxe')) {
-      return 'asset/images_booking/khach-san-view-bien-da-nang-2.jpg';
-    }
-    if (normalized.contains('superior')) {
-      return 'asset/images_booking/unnamed.jpg';
-    }
-    return 'asset/images_booking/thiet-ke-noi-that-khach-san-binh-dan-gay-an-tuong-du-khach.jpg';
   }
 }
 
@@ -353,6 +356,10 @@ class RoomModel {
         ? (roomTypeJson['basePrice'] as num?)?.toDouble()
         : (json['basePrice'] as num?)?.toDouble();
 
+    final imageUrl = roomTypeJson is Map
+        ? roomTypeJson['imageUrl']?.toString() ?? roomTypeJson['imageURL']?.toString()
+        : json['imageUrl']?.toString() ?? json['imageURL']?.toString() ?? json['imagePath']?.toString();
+
     return RoomModel(
       roomId: json['roomId']?.toString() ?? '',
       roomTypeId: roomTypeId,
@@ -366,9 +373,7 @@ class RoomModel {
       roomTypeName: roomTypeName,
       description: description,
       basePrice: basePrice,
-      imagePath: roomTypeName == null
-          ? null
-          : RoomTypeModel._imageForRoomType(roomTypeName),
+      imagePath: imageUrl ?? 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80',
     );
   }
 }

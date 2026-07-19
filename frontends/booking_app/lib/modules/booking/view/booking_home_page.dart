@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../auth/viewmodel/auth_viewmodel.dart';
 import '../viewmodel/booking_viewmodel.dart';
 import '../widgets/room_type_card.dart';
 import 'booking_pages.dart';
@@ -28,11 +30,67 @@ class _BookingHomePageState extends State<BookingHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final authVm = Get.find<AuthViewModel>();
+    final username = authVm.currentUser.value?.username ?? 'khách';
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Hotel Booking'),
         backgroundColor: Colors.transparent,
+        actions: [
+          if (authVm.isLoggedIn)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: authVm.logout,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: 0.14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text(
+                  'Đăng xuất',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => Get.toNamed('/login'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: 0.14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.login_rounded, size: 20),
+                label: const Text(
+                  'Đăng nhập',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -69,9 +127,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
                 children: [
-                  _GuestHeader(data: data),
-                  const SizedBox(height: 18),
-                  _ReceptionistActions(),
+                  _GuestHeader(data: data, username: username),
                   const SizedBox(height: 18),
                   Text(
                     'Loại phòng',
@@ -92,6 +148,8 @@ class _BookingHomePageState extends State<BookingHomePage> {
                               '${roomType.description}\nGiá từ ${roomType.basePrice.toStringAsFixed(0)}',
                           imagePath: roomType.imagePath,
                           onTap: () async {
+                            if (!context.mounted) return;
+
                             final changed = await Navigator.of(context)
                                 .push<bool>(
                                   MaterialPageRoute(
@@ -125,107 +183,11 @@ class _BookingHomePageState extends State<BookingHomePage> {
   }
 }
 
-class _ReceptionistActions extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.98),
-            const Color(0xFFFFF3E0),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFFFC98A), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF9800).withValues(alpha: 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Lễ tân',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Phần giành riêng cho lễ tân, xem trạng thái phòng và check-in / check-out.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade700,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RoomStatusPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.meeting_room_rounded),
-                  label: const Text('Xem trạng thái phòng'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CheckInOutPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.badge_rounded),
-                  label: const Text('Check-in / Check-out'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CancelRequestsPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.cancel_presentation_rounded),
-                  label: const Text('Duyệt hủy booking'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _GuestHeader extends StatelessWidget {
-  const _GuestHeader({required this.data});
+  const _GuestHeader({required this.data, required this.username});
 
   final HomepageData data;
+  final String username;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +216,15 @@ class _GuestHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          Text(
+            'Xin chào, $username',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFFB85C00),
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             'Chào mừng đến với Khách sạn FPT Goden, khách sạn 5 sao hàng đầu Việt Nam.',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -322,12 +293,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _bookingsFuture = BookingApi.getBookings();
+    _bookingsFuture = _loadBookings();
+  }
+
+  Future<List<BookingSummary>> _loadBookings() async {
+    final authVm = Get.find<AuthViewModel>();
+    return BookingApi.getBookings(userId: authVm.currentUser.value?.userId);
   }
 
   Future<void> _reload() async {
     setState(() {
-      _bookingsFuture = BookingApi.getBookings();
+      _bookingsFuture = _loadBookings();
     });
   }
 
@@ -1042,7 +1018,10 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
   @override
   void initState() {
     super.initState();
-    _bookingsFuture = BookingApi.getBookings(date: _formatDate(_selectedDate));
+    _bookingsFuture = BookingApi.getBookings(
+      date: _formatDate(_selectedDate),
+      userId: Get.find<AuthViewModel>().currentUser.value?.userId,
+    );
   }
 
   String _formatDate(DateTime value) {
@@ -1055,6 +1034,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
     setState(() {
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
+        userId: Get.find<AuthViewModel>().currentUser.value?.userId,
       );
     });
   }
@@ -1073,6 +1053,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
       _selectedDate = picked;
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
+        userId: Get.find<AuthViewModel>().currentUser.value?.userId,
       );
     });
   }
@@ -1083,6 +1064,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
     setState(() {
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
+        userId: Get.find<AuthViewModel>().currentUser.value?.userId,
       );
     });
   }

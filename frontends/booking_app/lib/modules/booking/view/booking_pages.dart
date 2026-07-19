@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../auth/viewmodel/auth_viewmodel.dart';
 import '../viewmodel/booking_viewmodel.dart';
 
 class RoomTypeDetailPage extends StatelessWidget {
@@ -201,6 +203,15 @@ class RoomTypeDetailPage extends StatelessWidget {
               onPressed: availableRooms.isEmpty
                   ? null
                   : () async {
+                      final authVm = Get.find<AuthViewModel>();
+                      if (!authVm.isLoggedIn) {
+                        final loggedIn = await Get.toNamed('/login');
+                        if (!context.mounted) return;
+                        if (loggedIn != true && !authVm.isLoggedIn) {
+                          return;
+                        }
+                      }
+
                       final booked = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(
                           builder: (_) => BookingFormPage(
@@ -372,10 +383,18 @@ class _BookingFormPageState extends State<BookingFormPage> {
     }
 
     final booking = widget.prefillBooking;
+    final authVm = Get.find<AuthViewModel>();
+    final currentUser = authVm.currentUser.value;
+
     _fullNameController.text =
-        widget.initialGuestName ?? booking?.guestName ?? '';
-    _phoneController.text = widget.initialPhone ?? booking?.phone ?? '';
-    _emailController.text = widget.initialEmail ?? booking?.email ?? '';
+        widget.initialGuestName ??
+        booking?.guestName ??
+        currentUser?.fullName ??
+        '';
+    _phoneController.text =
+        widget.initialPhone ?? booking?.phone ?? currentUser?.phone ?? '';
+    _emailController.text =
+        widget.initialEmail ?? booking?.email ?? currentUser?.email ?? '';
 
     final parsedCheckin =
         widget.initialCheckin ??
@@ -608,11 +627,13 @@ class _BookingFormPageState extends State<BookingFormPage> {
           _selectedRoom!.roomId,
         );
       } else {
+        final authVm = Get.find<AuthViewModel>();
         await BookingApi.createBooking(
           CreateBookingPayload(
             fullName: _fullNameController.text.trim(),
             phone: _phoneController.text.trim(),
             email: _emailController.text.trim(),
+            userId: authVm.currentUser.value?.userId ?? '',
             roomTypeId: widget.roomType.roomTypeId,
             roomId: _selectedRoom!.roomId,
             expectedCheckin: _formatDateForApi(_checkinDate!),
@@ -724,6 +745,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
                 children: [
                   TextFormField(
                     controller: _fullNameController,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Họ và tên',
                       prefixIcon: Icon(Icons.person_rounded),
@@ -734,6 +756,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _phoneController,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Số điện thoại',
                       prefixIcon: Icon(Icons.phone_rounded),
@@ -745,6 +768,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _emailController,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_rounded),
