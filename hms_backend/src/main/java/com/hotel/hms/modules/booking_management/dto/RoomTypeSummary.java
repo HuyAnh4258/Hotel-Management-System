@@ -1,4 +1,4 @@
-﻿package com.hotel.hms.modules.booking_management.dto;
+package com.hotel.hms.modules.booking_management.dto;
 
 import java.math.BigDecimal;
 

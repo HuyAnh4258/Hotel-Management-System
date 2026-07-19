@@ -10,10 +10,23 @@ spring:
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  # Cấu hình gửi mail
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: myeternity001@gmail.com
+    password: svmp rbwn xsnq cdnw
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   # Cấu hình JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: true

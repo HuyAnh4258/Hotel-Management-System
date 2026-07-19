@@ -31,7 +31,7 @@ public class ServiceServiceImpl {
     @Transactional
     public ServiceResponseDTO create(ServiceRequestDTO request) {
         if (serviceRepo.existsByServiceName(request.getServiceName())) {
-            throw new RuntimeException("Tên dịch vụ đã tồn tại");
+            throw new RuntimeException("TÃªn dá»‹ch vá»¥ Ä‘Ã£ tá»“n táº¡i");
         }
         Service svc = Service.builder()
                 .serviceId(idGenerator.generateStaticId("SRV", serviceRepo))
@@ -54,7 +54,7 @@ public class ServiceServiceImpl {
         Service svc = findOrThrow(id);
         serviceRepo.findByServiceName(request.getServiceName()).ifPresent(existing -> {
             if (!existing.getServiceId().equals(id)) {
-                throw new RuntimeException("Tên dịch vụ đã tồn tại");
+                throw new RuntimeException("TÃªn dá»‹ch vá»¥ Ä‘Ã£ tá»“n táº¡i");
             }
         });
         svc.setServiceName(request.getServiceName());
@@ -83,7 +83,7 @@ public class ServiceServiceImpl {
             for (ServiceRequestDTO.RecipeItemDTO itemDto : items) {
                 com.hotel.hms.modules.catalogue_management.entity.InventoryItem invItem = 
                     inventoryRepo.findById(itemDto.getItemId())
-                        .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư: " + itemDto.getItemId()));
+                        .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y váº­t tÆ°: " + itemDto.getItemId()));
                 
                 com.hotel.hms.modules.catalogue_management.entity.ServiceInventoryRecipe recipe = 
                     com.hotel.hms.modules.catalogue_management.entity.ServiceInventoryRecipe.builder()
@@ -139,7 +139,7 @@ public class ServiceServiceImpl {
 
     private Service findOrThrow(String id) {
         return serviceRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ"));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥"));
     }
 
     private void broadcastServiceUpdate(ServiceResponseDTO response) {

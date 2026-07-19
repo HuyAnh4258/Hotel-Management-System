@@ -9,9 +9,9 @@ import lombok.*;
 @Builder
 public class LoginRequest {
 
-    @NotBlank(message = "Tên đăng nhập hoặc email không được trống")
+    @NotBlank(message = "TÃªn Ä‘Äƒng nháº­p hoáº·c email khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     private String username;  // Can be username or email
 
-    @NotBlank(message = "Mật khẩu không được trống")
+    @NotBlank(message = "Máº­t kháº©u khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     private String password;
 }

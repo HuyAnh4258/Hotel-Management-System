@@ -1,4 +1,4 @@
-﻿package com.hotel.hms.modules.booking_management.service;
+package com.hotel.hms.modules.booking_management.service;
 
 import com.hotel.hms.modules.booking_management.dto.BookingSummary;
 import com.hotel.hms.modules.booking_management.dto.CreateBookingRequest;

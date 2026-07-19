@@ -461,6 +461,16 @@ CREATE TABLE ServiceOrder_Service (
 ) ENGINE=InnoDB;
 
 -- ============================================================
+-- 24. OtpCodes (Forgot Password OTP)
+-- ============================================================
+CREATE TABLE OtpCodes (
+    Email      VARCHAR(100) NOT NULL,
+    Otp        VARCHAR(6)   NOT NULL,
+    ExpireTime DATETIME     NOT NULL,
+    CONSTRAINT pk_otp_codes PRIMARY KEY (Email)
+) ENGINE=InnoDB;
+
+-- ============================================================
 -- SEED DATA
 -- ============================================================
 
@@ -481,7 +491,7 @@ INSERT INTO RoomType (RoomTypeId, TypeName, Description, BasePrice, MaxOccupancy
 -- Password for all users: Hotel@123 (BCrypt)
 INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt) VALUES
 ('USR-00000001', 'owner',        'owner@fptgolden.vn',        '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
-('USR-00000002', 'manager',      'manager@fptgolden.vn',      '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000002', 'manager',      'myeternity002@gmail.com',      '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000003', 'receptionist', 'receptionist@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000004', 'servicestaff', 'servicestaff@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000005', 'housekeeper',  'housekeeper@fptgolden.vn',  '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
