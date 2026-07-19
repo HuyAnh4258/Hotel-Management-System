@@ -15,6 +15,7 @@ import 'package:management_app/modules/booking_management/view/room_list_page.da
 import 'package:management_app/modules/operation_analysis/view/order_list_page.dart';
 import 'package:management_app/modules/operation_analysis/view/owner_dashboard_page.dart';
 import 'package:management_app/modules/profile/view/profile_page.dart';
+import 'package:management_app/modules/property_management/view/property_page.dart';
 
 class AppPages {
   static final routes = [
@@ -34,5 +35,6 @@ class AppPages {
     GetPage(name: '/service-staff', page: () => const OrderListPage()),
     GetPage(name: '/owner-dashboard', page: () => const OwnerDashboardPage()),
     GetPage(name: '/profile', page: () => const ProfilePage()),
+    GetPage(name: '/property', page: () => const PropertyPage()),
   ];
 }
