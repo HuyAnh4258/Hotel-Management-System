@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'booking/view/booking_home_page.dart';
-import 'login/login_page.dart';
-import 'login/splash_page.dart';
-import 'login/viewmodel/auth_viewmodel.dart';
-import 'receptionist/view/receptionist_home_page.dart';
+import 'modules/booking/view/booking_home_page.dart';
+import 'modules/auth/view/login_page.dart';
+import 'modules/auth/view/splash_page.dart';
+import 'modules/auth/viewmodel/auth_viewmodel.dart';
 
 class BookingApp extends StatelessWidget {
   const BookingApp({super.key});
@@ -23,10 +22,6 @@ class BookingApp extends StatelessWidget {
         GetPage(name: '/splash', page: () => const SplashPage()),
         GetPage(name: '/login', page: () => const LoginPage()),
         GetPage(name: '/dashboard', page: () => const BookingHomePage()),
-        GetPage(
-          name: '/receptionist',
-          page: () => const ReceptionistHomePage(),
-        ),
       ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

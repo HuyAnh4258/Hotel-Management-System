@@ -3,25 +3,30 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'register_page.dart';
-import 'viewmodel/auth_viewmodel.dart';
+import '../viewmodel/auth_viewmodel.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _fullNameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _fullNameCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -176,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Đặt phòng nhanh chóng, tiện lợi và an toàn',
+                    'Đăng kí tài khoản để đặt phòng dễ dàng hơn',
                     style: TextStyle(
                       color: Color(0xFF9FB0D3),
                       fontSize: 14,
@@ -194,7 +199,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildFormPanel(AuthViewModel vm, {BorderRadius? borderRadius}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 46),
+      padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: borderRadius,
@@ -206,7 +211,7 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Chào mừng trở lại',
+              'Đăng kí tài khoản',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
@@ -215,17 +220,35 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Đăng nhập để tiếp tục đặt phòng',
+              'Vui lòng nhập thông tin để tạo tài khoản',
               style: TextStyle(fontSize: 15, color: Color(0xFF9CA3AF)),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 28),
+            _buildInputField(
+              controller: _fullNameCtrl,
+              label: 'Họ và tên',
+              icon: Icons.badge_outlined,
+            ),
+            const SizedBox(height: 16),
             _buildInputField(
               controller: _usernameCtrl,
               label: 'Tên đăng nhập',
               icon: Icons.person_outline,
             ),
-            const SizedBox(height: 18),
-            _buildPasswordField(),
+            const SizedBox(height: 16),
+            _buildInputField(
+              controller: _phoneCtrl,
+              label: 'Số điện thoại',
+              icon: Icons.phone_outlined,
+            ),
+            const SizedBox(height: 16),
+            _buildInputField(
+              controller: _emailCtrl,
+              label: 'Email',
+              icon: Icons.email_outlined,
+            ),
+            const SizedBox(height: 16),
+            _buildPasswordField(controller: _passwordCtrl, label: 'Mật khẩu'),
             const SizedBox(height: 12),
             Obx(
               () => vm.errorMessage.isNotEmpty
@@ -244,7 +267,9 @@ class _LoginPageState extends State<LoginPage> {
               height: 58,
               child: Obx(
                 () => ElevatedButton.icon(
-                  onPressed: vm.isLoading.value ? null : () => _handleLogin(vm),
+                  onPressed: vm.isLoading.value
+                      ? null
+                      : () => _handleRegister(vm),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F2557),
                     shape: RoundedRectangleBorder(
@@ -261,9 +286,12 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.login_rounded, color: Colors.white),
+                      : const Icon(
+                          Icons.person_add_rounded,
+                          color: Colors.white,
+                        ),
                   label: Text(
-                    vm.isLoading.value ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP',
+                    vm.isLoading.value ? 'ĐANG XỬ LÝ...' : 'ĐĂNG KÍ TÀI KHOẢN',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -276,27 +304,16 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 18),
             Center(
-              child: Column(
-                children: [
-                  TextButton(
-                    onPressed: () => Get.to(() => const RegisterPage()),
-                    child: const Text(
-                      'Chưa có tài khoản? Đăng kí tài khoản',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF0F2557),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              child: TextButton(
+                onPressed: () => Get.back(),
+                child: const Text(
+                  'Đã có tài khoản? Đăng nhập',
+                  style: TextStyle(
+                    color: Color(0xFF0F2557),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Tài khoản đăng ký sẽ dùng để đặt phòng Booking',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -339,15 +356,16 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+  }) {
     return TextFormField(
-      controller: _passwordCtrl,
+      controller: controller,
       obscureText: true,
-      validator: (v) =>
-          v == null || v.isEmpty ? 'Vui lòng nhập mật khẩu' : null,
-      onFieldSubmitted: (_) => _handleLogin(Get.find<AuthViewModel>()),
+      validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null,
       decoration: InputDecoration(
-        hintText: 'Mật khẩu',
+        hintText: label,
         prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B7280)),
         filled: true,
         fillColor: const Color(0xFFF8F8FC),
@@ -371,19 +389,25 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _handleLogin(AuthViewModel vm) {
+  void _handleRegister(AuthViewModel vm) {
     if (!_formKey.currentState!.validate()) return;
 
-    vm.login(_usernameCtrl.text.trim(), _passwordCtrl.text).then((ok) {
-      if (!ok) return;
-
-      if (vm.isReceptionist) {
-        Get.offAllNamed('/receptionist');
-      } else if (vm.isGuest) {
-        Get.offAllNamed('/dashboard');
-      } else {
-        vm.errorMessage.value = 'Tài khoản không có quyền truy cập hệ thống';
-      }
-    });
+    vm
+        .register(
+          username: _usernameCtrl.text.trim(),
+          password: _passwordCtrl.text,
+          email: _emailCtrl.text.trim(),
+          fullName: _fullNameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+        )
+        .then((ok) {
+          if (ok) {
+            Get.snackbar(
+              'Thành công',
+              'Đăng ký tài khoản thành công. Vui lòng đăng nhập lại.',
+            );
+            Get.offAllNamed('/login');
+          }
+        });
   }
 }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/core/widgets/app_widgets.dart';
 import 'package:management_app/modules/auth/viewmodel/auth_viewmodel.dart';
+import 'package:hms_shared/auth/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -492,7 +493,14 @@ class _LoginPageState extends State<LoginPage>
   void _handleLogin(AuthViewModel vm) {
     if (!_formKey.currentState!.validate()) return;
     vm.login(_usernameCtrl.text.trim(), _passwordCtrl.text.trim()).then((ok) {
-      if (ok) Get.offAllNamed('/dashboard');
+      if (ok) {
+        final auth = Get.find<AuthService>();
+        if (auth.hasAnyRole(['RECEPTIONIST'])) {
+          Get.offAllNamed('/receptionist');
+        } else {
+          Get.offAllNamed('/dashboard');
+        }
+      }
     });
   }
 }

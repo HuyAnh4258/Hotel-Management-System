@@ -39,6 +39,15 @@ class _DashboardPageState extends State<DashboardPage>
   Widget build(BuildContext context) {
     final auth = Get.find<AuthService>();
     return Obx(() {
+      if (auth.hasAnyRole(['RECEPTIONIST'])) {
+        // Redirect receptionist to their home immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAllNamed('/receptionist');
+        });
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
       if (auth.hasAnyRole(['OWNER'])) {
         final isWide = MediaQuery.of(context).size.width > 800;
         return Scaffold(

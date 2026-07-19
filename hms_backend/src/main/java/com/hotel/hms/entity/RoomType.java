@@ -28,6 +28,9 @@ public class RoomType {
     @Column(name = "IsActive", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "imageURL", length = 255)
+    private String imageUrl;
+
     public String getRoomTypeId() {
         return roomTypeId;
     }
@@ -50,5 +53,9 @@ public class RoomType {
 
     public Boolean getIsActive() {
         return isActive;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
     }
 }

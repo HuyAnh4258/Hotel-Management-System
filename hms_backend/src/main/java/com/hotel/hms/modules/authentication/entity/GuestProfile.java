@@ -17,7 +17,7 @@ public class GuestProfile {
     @Column(name = "GuestId", length = 12, nullable = false)
     private String guestId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "UserId", nullable = false, foreignKey = @ForeignKey(name = "fk_guest_user"))
     private User user;
 

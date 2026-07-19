@@ -131,6 +131,7 @@ CREATE TABLE RoomType (
     Description  VARCHAR(255)  NULL,
     BasePrice    DECIMAL(18,2) NOT NULL,
     MaxOccupancy INT           NOT NULL,
+    imageURL	 VARCHAR(255)  NULL,
     IsActive     BIT           NOT NULL DEFAULT 1,
     CONSTRAINT pk_room_type PRIMARY KEY (RoomTypeId),
     CONSTRAINT uq_type_name  UNIQUE (TypeName)
@@ -471,11 +472,11 @@ INSERT INTO Roles (RoleId, RoleName, Description) VALUES
 ('ROL-00000005', 'HOUSEKEEPER',    'Nhân viên buồng phòng'),
 ('ROL-00000006', 'GUEST',          'Khách sử dụng dịch vụ');
 
-INSERT INTO RoomType (RoomTypeId, TypeName, Description, BasePrice, MaxOccupancy) VALUES
-('RTP-00000001', 'Standard', 'Phòng tiêu chuẩn',           500000,  2),
-('RTP-00000002', 'Deluxe',   'Phòng cao cấp có view',      800000,  2),
-('RTP-00000003', 'Superior', 'Phòng Superior rộng rãi',    650000,  3),
-('RTP-00000004', 'Suite',    'Phòng Suite sang trọng',    1500000, 4);
+INSERT INTO RoomType (RoomTypeId, TypeName, Description, BasePrice, MaxOccupancy, imageURL) VALUES
+('RTP-00000001', 'Standard', 'Phòng tiêu chuẩn',           500000,  2, 'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=600&q=80'),
+('RTP-00000002', 'Deluxe',   'Phòng cao cấp có view',      800000,  2, 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80'),
+('RTP-00000003', 'Superior', 'Phòng Superior rộng rãi',    650000,  3, 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80'),
+('RTP-00000004', 'Suite',    'Phòng Suite sang trọng',    1500000, 4, 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=600&q=80');
 
 -- Password for all users: Hotel@123 (BCrypt)
 INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt) VALUES
@@ -523,3 +524,11 @@ INSERT INTO Service (ServiceId, ServiceName, Description, UnitPrice, IsActive, C
 ('SRV-00000004', 'Xà phòng tắm',       'Xà phòng tắm khách sạn',      25000, 1, NOW(), NOW()),
 ('SRV-00000005', 'Giặt ủi',            'Dịch vụ giặt ủi quần áo',     50000, 1, NOW(), NOW()),
 ('SRV-00000006', 'Ăn sáng buffet',     'Buffet sáng tại nhà hàng',   150000, 1, NOW(), NOW());
+
+INSERT INTO Room (RoomId, RoomTypeId, RoomName, FloorNumber, Status, Description, IsActive) VALUES
+('101', 'RTP-00000001', 'Standard 101', 1, 'AVAILABLE', 'Phòng ở tầng 1', 1),
+('102', 'RTP-00000001', 'Standard 102', 1, 'CLEANING', 'Đang dọn dẹp', 1),
+('201', 'RTP-00000002', 'Deluxe 201', 2, 'AVAILABLE', 'Phòng Deluxe mặt tiền', 1),
+('202', 'RTP-00000002', 'Deluxe 202', 2, 'OCCUPIED', 'Đã có khách thuê', 1),
+('301', 'RTP-00000003', 'Family 301', 3, 'AVAILABLE', 'Phòng gia đình rộng rãi', 1),
+('401', 'RTP-00000004', 'VIP Spa 401', 4, 'MAINTENANCE', 'Đang bảo trì bồn sục', 1);

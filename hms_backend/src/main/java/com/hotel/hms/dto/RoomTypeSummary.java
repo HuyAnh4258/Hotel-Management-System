@@ -7,6 +7,7 @@ public record RoomTypeSummary(
         String typeName,
         String description,
         BigDecimal basePrice,
-        Integer maxOccupancy
+        Integer maxOccupancy,
+        String imageUrl
 ) {
 }

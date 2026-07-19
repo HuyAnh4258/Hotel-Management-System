@@ -8,6 +8,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.hotel.hms.modules.authentication.entity.GuestProfile;
 
 @Entity
 @Table(name = "Booking")

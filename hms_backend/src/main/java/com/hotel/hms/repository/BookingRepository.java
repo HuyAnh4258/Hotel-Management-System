@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BookingRepository extends JpaRepository<Booking, String> {
     List<Booking> findTop8ByOrderByCreatedAtDesc();
 
-    List<Booking> findByGuest_UserIdOrderByCreatedAtDesc(String userId);
+    List<Booking> findByGuest_User_UserIdOrderByCreatedAtDesc(String userId);
 }

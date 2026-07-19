@@ -6,15 +6,6 @@ import com.hotel.hms.modules.authentication.entity.*;
 import com.hotel.hms.modules.authentication.repository.*;
 import com.hotel.hms.modules.employee_management.entity.EmployeeProfile;
 import com.hotel.hms.modules.employee_management.repository.EmployeeProfileRepository;
-import com.hotel.hms.entity.GuestProfile;
-import com.hotel.hms.modules.authentication.dto.*;
-import com.hotel.hms.modules.authentication.entity.Role;
-import com.hotel.hms.modules.authentication.entity.User;
-import com.hotel.hms.modules.authentication.entity.UserRole;
-import com.hotel.hms.modules.authentication.repository.RoleRepository;
-import com.hotel.hms.modules.authentication.repository.UserRepository;
-import com.hotel.hms.modules.authentication.repository.UserRoleRepository;
-import com.hotel.hms.repository.GuestProfileRepository;
 import com.hotel.hms.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -53,11 +44,6 @@ public class AuthService {
             throw new RuntimeException("Sai tên đăng nhập hoặc mật khẩu");
         }
 
-        List<String> roles = userRoleRepo.findByUser_UserId(user.getUserId()).stream()
-                .map(ur -> ur.getRole().getRoleName())
-                .toList();
-
-        String fullName = resolveFullName(user.getUserId(), roles);
         List<UserRole> userRoles = userRoleRepo.findByUser_UserId(user.getUserId());
         List<String> roles = userRoles.stream()
                 .map(ur -> ur.getRole().getRoleName())
@@ -66,8 +52,11 @@ public class AuthService {
                 .map(ur -> ur.getRole().getRoleId())
                 .toList();
 
-        GuestProfile guestProfile = guestRepo.findByUserId(user.getUserId()).orElse(null);
+        GuestProfile guestProfile = guestRepo.findByUser_UserId(user.getUserId()).orElse(null);
         String fullName = guestProfile != null ? guestProfile.getFullName() : null;
+        if (fullName == null) {
+            fullName = resolveFullName(user.getUserId(), roles);
+        }
         String phone = guestProfile != null ? guestProfile.getPhone() : null;
         String email = user.getEmail();
         String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername(), roles);
@@ -113,7 +102,7 @@ public class AuthService {
 
         guestRepo.save(GuestProfile.builder()
                 .guestId(idGenerator.generateStaticId("GST", guestRepo))
-                .userId(userId)
+                .user(user)
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
                 .build());

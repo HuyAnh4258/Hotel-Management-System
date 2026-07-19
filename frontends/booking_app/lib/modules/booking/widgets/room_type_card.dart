@@ -30,18 +30,17 @@ class RoomTypeCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: scheme.primary.withValues(alpha: 0.10),
-                  child: Icon(
-                    Icons.hotel_rounded,
-                    size: 48,
-                    color: scheme.primary,
-                  ),
-                ),
-              ),
+              child: imagePath.startsWith('http')
+                  ? Image.network(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _buildPlaceholder(scheme),
+                    )
+                  : Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _buildPlaceholder(scheme),
+                    ),
             ),
             Container(
               decoration: BoxDecoration(
@@ -102,6 +101,17 @@ class RoomTypeCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(ColorScheme scheme) {
+    return Container(
+      color: scheme.primary.withValues(alpha: 0.10),
+      child: Icon(
+        Icons.hotel_rounded,
+        size: 48,
+        color: scheme.primary,
       ),
     );
   }

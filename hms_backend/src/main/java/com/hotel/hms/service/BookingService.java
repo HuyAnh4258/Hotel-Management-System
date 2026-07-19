@@ -6,19 +6,19 @@ import com.hotel.hms.dto.HomepageResponse;
 import com.hotel.hms.dto.RoomSummary;
 import com.hotel.hms.dto.RoomTypeSummary;
 import com.hotel.hms.entity.Booking;
-import com.hotel.hms.entity.GuestProfile;
+import com.hotel.hms.modules.authentication.entity.GuestProfile;
+import com.hotel.hms.modules.authentication.entity.User;
 import com.hotel.hms.entity.Room;
 import com.hotel.hms.entity.RoomBooking;
 import com.hotel.hms.entity.RoomType;
 import com.hotel.hms.entity.Voucher;
 import com.hotel.hms.repository.BookingRepository;
-import com.hotel.hms.repository.GuestProfileRepository;
+import com.hotel.hms.modules.authentication.repository.GuestProfileRepository;
+import com.hotel.hms.modules.authentication.repository.UserRepository;
 import com.hotel.hms.repository.RoomBookingRepository;
 import com.hotel.hms.repository.RoomRepository;
 import com.hotel.hms.repository.RoomTypeRepository;
 import com.hotel.hms.repository.VoucherRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,9 +40,7 @@ public class BookingService {
     private final RoomBookingRepository roomBookingRepository;
     private final GuestProfileRepository guestProfileRepository;
     private final VoucherRepository voucherRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final UserRepository userRepository;
 
     public BookingService(
             RoomTypeRepository roomTypeRepository,
@@ -50,7 +48,8 @@ public class BookingService {
             BookingRepository bookingRepository,
             RoomBookingRepository roomBookingRepository,
             GuestProfileRepository guestProfileRepository,
-            VoucherRepository voucherRepository
+            VoucherRepository voucherRepository,
+            UserRepository userRepository
     ) {
         this.roomTypeRepository = roomTypeRepository;
         this.roomRepository = roomRepository;
@@ -58,6 +57,7 @@ public class BookingService {
         this.roomBookingRepository = roomBookingRepository;
         this.guestProfileRepository = guestProfileRepository;
         this.voucherRepository = voucherRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +92,7 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId is required");
         }
 
-        return bookingRepository.findByGuest_UserIdOrderByCreatedAtDesc(userId).stream()
+        return bookingRepository.findByGuest_User_UserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toBookingSummary)
                 .toList();
     }
@@ -314,7 +314,7 @@ public class BookingService {
         }
 
         if (request.email() != null && !request.email().trim().isEmpty()) {
-            updateGuestEmail(guest.getUserId(), request.email().trim());
+            updateGuestEmail(guest.getUser().getUserId(), request.email().trim());
         }
 
         if (request.roomIds() != null && !request.roomIds().isEmpty()) {
@@ -390,7 +390,7 @@ public class BookingService {
 
         GuestProfile guest = null;
         if (request.userId() != null && !request.userId().isBlank()) {
-            guest = guestProfileRepository.findByUserId(request.userId().trim()).orElse(null);
+            guest = guestProfileRepository.findByUser_UserId(request.userId().trim()).orElse(null);
         }
         if (guest == null && phone != null && !phone.isBlank()) {
             guest = guestProfileRepository.findByPhone(phone)
@@ -403,7 +403,7 @@ public class BookingService {
             setField(guest, "phone", phone);
             guest = guestProfileRepository.save(guest);
             if (request.email() != null && !request.email().trim().isEmpty()) {
-                updateGuestEmail(guest.getUserId(), request.email().trim());
+                updateGuestEmail(guest.getUser().getUserId(), request.email().trim());
             }
         }
 
@@ -464,17 +464,17 @@ public class BookingService {
     }
 
     private GuestProfile createGuestProfile(String fullName, String phone, String email) {
-        String userId = createUserAccount(fullName, email, phone);
+        User user = createUserAccount(fullName, email, phone);
 
         GuestProfile guest = new GuestProfile();
         setField(guest, "guestId", generateId("GST", 12));
-        setField(guest, "userId", userId);
+        setField(guest, "user", user);
         setField(guest, "fullName", fullName);
         setField(guest, "phone", phone);
         return guestProfileRepository.save(guest);
     }
 
-    private String createUserAccount(String fullName, String email, String phone) {
+    private User createUserAccount(String fullName, String email, String phone) {
         String userId = generateId("USR", 12);
         String username = (email != null && !email.trim().isEmpty())
                 ? email.trim()
@@ -484,15 +484,14 @@ public class BookingService {
                 : username + "@guest.local";
 
         try {
-            entityManager.createNativeQuery("""
-                    INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt)
-                    VALUES (:userId, :username, :email, :hashedPassword, 1, NOW())
-                    """)
-                    .setParameter("userId", userId)
-                    .setParameter("username", username)
-                    .setParameter("email", normalizedEmail)
-                    .setParameter("hashedPassword", "BOOKING-GUEST")
-                    .executeUpdate();
+            User user = User.builder()
+                    .userId(userId)
+                    .username(username)
+                    .email(normalizedEmail)
+                    .hashedPassword("BOOKING-GUEST")
+                    .isActive(true)
+                    .build();
+            return userRepository.save(user);
         } catch (Exception e) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
@@ -500,8 +499,6 @@ public class BookingService {
                     e
             );
         }
-
-        return userId;
     }
 
     private void updateGuestEmail(String userId, String email) {
@@ -509,15 +506,11 @@ public class BookingService {
             return;
         }
 
-        entityManager.createNativeQuery("""
-                UPDATE `User`
-                SET Email = :email, Username = :username
-                WHERE UserId = :userId
-                """)
-                .setParameter("userId", userId)
-                .setParameter("email", email)
-                .setParameter("username", email)
-                .executeUpdate();
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setEmail(email);
+            user.setUsername(email);
+            userRepository.save(user);
+        });
     }
 
     private Voucher resolveVoucher(String voucherCode) {
@@ -593,17 +586,14 @@ public class BookingService {
     }
 
     private String getGuestEmail(Booking booking) {
-        if (booking.getGuest() == null || booking.getGuest().getUserId() == null) {
+        if (booking.getGuest() == null || booking.getGuest().getUser() == null
+                || booking.getGuest().getUser().getUserId() == null) {
             return "";
         }
 
         try {
-            Object result = entityManager.createNativeQuery(
-                            "SELECT Email FROM `User` WHERE UserId = :userId"
-                    )
-                    .setParameter("userId", booking.getGuest().getUserId())
-                    .getSingleResult();
-            return result != null ? result.toString() : "";
+            User user = booking.getGuest().getUser();
+            return user.getEmail() != null ? user.getEmail() : "";
         } catch (Exception e) {
             return "";
         }
@@ -615,7 +605,8 @@ public class BookingService {
                 roomType.getTypeName(),
                 roomType.getDescription(),
                 roomType.getBasePrice(),
-                roomType.getMaxOccupancy()
+                roomType.getMaxOccupancy(),
+                roomType.getImageUrl()
         );
     }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../login/viewmodel/auth_viewmodel.dart';
+import '../../auth/viewmodel/auth_viewmodel.dart';
 import '../viewmodel/booking_viewmodel.dart';
 
 class RoomTypeDetailPage extends StatelessWidget {
