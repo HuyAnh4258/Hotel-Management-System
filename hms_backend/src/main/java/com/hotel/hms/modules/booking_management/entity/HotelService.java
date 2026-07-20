@@ -19,7 +19,7 @@ public class HotelService {
     @Column(name = "Description", length = 500)
     private String description;
 
-    @Column(name = "Price", nullable = false, precision = 18, scale = 2)
+    @Column(name = "UnitPrice", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
     @Column(name = "IsActive", nullable = false)
