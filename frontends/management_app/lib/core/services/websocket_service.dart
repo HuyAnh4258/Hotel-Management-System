@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
-import 'package:management_app/modules/operation_analysis/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
 
 class WebSocketService extends GetxService {
   StompClient? _client;
