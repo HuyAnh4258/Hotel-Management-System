@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../auth/viewmodel/auth_viewmodel.dart';
 
 // ─── Colour Tokens ────────────────────────────────────────────────────────────
 const _kDeep    = Color(0xFF1C0A04);   // nền nâu tối
@@ -264,7 +265,14 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
                 const SizedBox(height: 24),
                 // CTA button
                 GestureDetector(
-                  onTap: () => Get.offAllNamed('/dashboard'),
+                  onTap: () {
+                    final authVm = Get.find<AuthViewModel>();
+                    if (authVm.isLoggedIn) {
+                      Get.offAllNamed('/dashboard');
+                    } else {
+                      Get.toNamed('/login');
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 28,
@@ -604,7 +612,14 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 28),
           GestureDetector(
-            onTap: () => Get.offAllNamed('/dashboard'),
+            onTap: () {
+              final authVm = Get.find<AuthViewModel>();
+              if (authVm.isLoggedIn) {
+                Get.offAllNamed('/dashboard');
+              } else {
+                Get.toNamed('/login');
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 36,

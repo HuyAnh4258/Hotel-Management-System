@@ -33,7 +33,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
   @override
   Widget build(BuildContext context) {
     final authVm = Get.find<AuthViewModel>();
-    final username = authVm.currentUser.value?.username ?? 'khách';
+    final fullName = authVm.currentUser.value?.fullName ?? 'khách';
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -129,7 +129,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
                 children: [
-                  _GuestHeader(data: data, username: username),
+                  _GuestHeader(data: data, fullName: fullName),
                   const SizedBox(height: 18),
                   Text(
                     'Loại phòng',
@@ -186,10 +186,10 @@ class _BookingHomePageState extends State<BookingHomePage> {
 }
 
 class _GuestHeader extends StatelessWidget {
-  const _GuestHeader({required this.data, required this.username});
+  const _GuestHeader({required this.data, required this.fullName});
 
   final HomepageData data;
-  final String username;
+  final String fullName;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +219,7 @@ class _GuestHeader extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Xin chào, $username',
+            'Xin chào, $fullName',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: const Color(0xFFB85C00),
