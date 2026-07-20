@@ -6,7 +6,7 @@ import 'package:management_app/modules/dashboard/view/dashboard_page.dart';
 import 'package:management_app/modules/operation_analysis/view/pricing_page.dart';
 import 'package:management_app/modules/catalogue_management/view/inventory_page.dart';
 import 'package:management_app/modules/catalogue_management/view/voucher_page.dart';
-import 'package:management_app/modules/operation_analysis/view/services_page.dart';
+import 'package:management_app/modules/catalogue_management/view/services_page.dart';
 import 'package:management_app/modules/booking_management/view/receptionist_home_page.dart';
 
 // New imported pages
