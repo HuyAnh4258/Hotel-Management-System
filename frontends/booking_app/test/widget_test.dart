@@ -20,6 +20,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Hotel Booking'), findsOneWidget);
+    expect(find.text('Search Rooms'), findsOneWidget);
   });
 }

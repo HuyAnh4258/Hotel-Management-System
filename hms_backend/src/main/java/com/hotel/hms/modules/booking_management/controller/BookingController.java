@@ -42,10 +42,7 @@ public class BookingController {
             }
 
             LocalDate targetDate = LocalDate.parse(date);
-            return ResponseEntity.ok(bookingService.getBookingsByDate(targetDate).stream()
-                    .filter(booking -> booking != null && booking.bookingId() != null)
-                    .filter(booking -> userId.equalsIgnoreCase(booking.guestName()) || true)
-                    .toList());
+            return ResponseEntity.ok(bookingService.getBookingsForGuestByDate(userId, targetDate));
         }
 
         if (date == null || date.isBlank()) {
