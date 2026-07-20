@@ -19,6 +19,8 @@ import com.hotel.hms.modules.booking_management.repository.RoomBookingRepository
 import com.hotel.hms.modules.booking_management.repository.RoomRepository;
 import com.hotel.hms.modules.booking_management.repository.RoomTypeRepository;
 import com.hotel.hms.modules.booking_management.repository.VoucherRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,6 +43,9 @@ public class BookingService {
     private final GuestProfileRepository guestProfileRepository;
     private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BookingService(
             RoomTypeRepository roomTypeRepository,
@@ -146,6 +151,7 @@ public class BookingService {
     public BookingSummary updateBookingStatus(String bookingId, String status) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        setField(booking, "totalAmount", calculateBookingTotal(bookingId));
         setField(booking, "status", status);
         booking = bookingRepository.save(booking);
 
@@ -641,8 +647,40 @@ public class BookingService {
                 booking.getExpectedCheckin() != null ? booking.getExpectedCheckin().toString() : "",
                 booking.getExpectedCheckout() != null ? booking.getExpectedCheckout().toString() : "",
                 booking.getStatus(),
-                booking.getTotalAmount(),
+                calculateBookingTotal(booking.getBookingId()),
                 roomNames
         );
+    }
+
+    private BigDecimal calculateBookingTotal(String bookingId) {
+        if (bookingId == null || bookingId.isBlank()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal roomAmount = roomBookingRepository.findByBookingId(bookingId).stream()
+                .map(RoomBooking::getPriceAtBooking)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Object serviceAmount = entityManager.createNativeQuery("""
+                SELECT COALESCE(SUM(TotalAmount), 0)
+                FROM `Order`
+                WHERE BookingId = :bookingId
+                  AND UPPER(Status) <> 'CANCELLED'
+                """)
+                .setParameter("bookingId", bookingId)
+                .getSingleResult();
+
+        return roomAmount.add(toBigDecimal(serviceAmount));
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        return BigDecimal.ZERO;
     }
 }

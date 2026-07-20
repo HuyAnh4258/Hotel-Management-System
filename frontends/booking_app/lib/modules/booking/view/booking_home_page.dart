@@ -459,7 +459,10 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
             final data = snapshot.data ?? _MakeServiceOrderData.empty();
             final activeBookings = data.bookings.where((booking) {
               final status = booking.status.toUpperCase();
-              return status != 'CANCELLED' && status != 'CHECKED_OUT';
+              return status == 'PENDING' ||
+                  status == 'CONFIRMED' ||
+                  status == 'CHECKED_IN' ||
+                  status == 'CANCEL_REJECTED';
             }).toList();
             final selectedExists = activeBookings.any(
               (booking) => booking.bookingId == _selectedBookingId,
@@ -499,7 +502,9 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                   },
                 ),
                 const SizedBox(height: 18),
-                if (data.services.isEmpty)
+                if (activeBookings.isEmpty)
+                  const Text('Create an active booking before making an order')
+                else if (data.services.isEmpty)
                   const Text('No services available')
                 else
                   ...data.services.map(
@@ -522,7 +527,9 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                   ),
                 const SizedBox(height: 10),
                 FilledButton.icon(
-                  onPressed: _submitting ? null : () => _submit(data.services),
+                  onPressed: _submitting || activeBookings.isEmpty
+                      ? null
+                      : () => _submit(data.services),
                   icon: _submitting
                       ? const SizedBox(
                           width: 18,
@@ -896,6 +903,11 @@ Color _orderStatusColor(String status) {
 }
 
 String _formatMoney(num value) => '${value.toStringAsFixed(0)} VND';
+
+num _moneyValue(dynamic value) {
+  if (value is num) return value;
+  return num.tryParse(value?.toString() ?? '') ?? 0;
+}
 
 class FeedbackListPage extends StatefulWidget {
   const FeedbackListPage({super.key});
@@ -2489,6 +2501,9 @@ class _BookingCard extends StatelessWidget {
           ),
           Text('Checkin: ${booking.expectedCheckin}'),
           Text('Checkout: ${booking.expectedCheckout}'),
+          Text(
+            'Total payment: ${_formatMoney(_moneyValue(booking.totalAmount))}',
+          ),
           Text('Status: ${booking.status}'),
           const SizedBox(height: 12),
           Row(
