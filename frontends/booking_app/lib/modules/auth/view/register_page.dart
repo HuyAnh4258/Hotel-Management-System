@@ -39,10 +39,10 @@ class _RegisterPageState extends State<RegisterPage> {
         fit: StackFit.expand,
         children: [
           Image.asset('assets/images/booking_bg.jpg', fit: BoxFit.cover),
-          Container(color: Colors.black.withOpacity(0.42)),
+          Container(color: Colors.black.withValues(alpha: 0.42)),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: Container(color: Colors.black.withOpacity(0.08)),
+            child: Container(color: Colors.black.withValues(alpha: 0.08)),
           ),
           Center(
             child: SingleChildScrollView(
@@ -132,7 +132,7 @@ class _RegisterPageState extends State<RegisterPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   width: 2,
                 ),
               ),
@@ -147,7 +147,7 @@ class _RegisterPageState extends State<RegisterPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   width: 2,
                 ),
               ),
@@ -363,7 +363,15 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextFormField(
       controller: controller,
       obscureText: true,
-      validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Vui lòng nhập $label';
+        final passwordRegExp = RegExp(
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$%^&+=*!]).{8,}$");
+        if (!passwordRegExp.hasMatch(v.trim())) {
+          return 'Mật khẩu phải từ 8 ký tự, gồm chữ hoa, thường, số và ký tự đặc biệt';
+        }
+        return null;
+      },
       decoration: InputDecoration(
         hintText: label,
         prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B7280)),

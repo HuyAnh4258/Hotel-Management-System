@@ -28,13 +28,13 @@ public class InventoryServiceImpl implements IInventoryService {
     private final IdGenerator idGenerator;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // ── ITEM CRUD ──
+    // â”€â”€ ITEM CRUD â”€â”€
 
     @Override
     @Transactional
     public InventoryCatalogueResponseDTO createInventoryItem(InventoryCatalogueRequestDTO request, String employeeId) {
         if (inventoryRepo.existsByItemName(request.getItemName())) {
-            throw new RuntimeException("Tên vật tư đã tồn tại: " + request.getItemName());
+            throw new RuntimeException("TÃªn váº­t tÆ° Ä‘Ã£ tá»“n táº¡i: " + request.getItemName());
         }
 
         InventoryItem item = InventoryItem.builder()
@@ -68,7 +68,7 @@ public class InventoryServiceImpl implements IInventoryService {
 
         inventoryRepo.findByItemName(request.getItemName()).ifPresent(existing -> {
             if (!existing.getItemId().equals(id)) {
-                throw new RuntimeException("Tên vật tư đã tồn tại: " + request.getItemName());
+                throw new RuntimeException("TÃªn váº­t tÆ° Ä‘Ã£ tá»“n táº¡i: " + request.getItemName());
             }
         });
 
@@ -78,7 +78,7 @@ public class InventoryServiceImpl implements IInventoryService {
         item.setLowStockThreshold(request.getThreshold() != null ? request.getThreshold() : 5);
         InventoryCatalogueResponseDTO response = toResponse(inventoryRepo.save(item));
         
-        createAdjustment(item, employee, 0, AdjustmentType.UPDATE, "Cập nhật chi tiết vật tư (Tên: " + item.getItemName() + ")");
+        createAdjustment(item, employee, 0, AdjustmentType.UPDATE, "Cáº­p nháº­t chi tiáº¿t váº­t tÆ° (TÃªn: " + item.getItemName() + ")");
         
         broadcastInventoryUpdate(response);
         return response;
@@ -92,7 +92,7 @@ public class InventoryServiceImpl implements IInventoryService {
         item.setIsActive(false);
         InventoryCatalogueResponseDTO response = toResponse(inventoryRepo.save(item));
         
-        createAdjustment(item, employee, 0, AdjustmentType.DEACTIVATE, "Vô hiệu hóa vật tư (Xóa)");
+        createAdjustment(item, employee, 0, AdjustmentType.DEACTIVATE, "VÃ´ hiá»‡u hÃ³a váº­t tÆ° (XÃ³a)");
         
         broadcastInventoryUpdate(response);
     }
@@ -105,13 +105,13 @@ public class InventoryServiceImpl implements IInventoryService {
         item.setUnitPrice(unitPrice);
         InventoryCatalogueResponseDTO response = toResponse(inventoryRepo.save(item));
         
-        createAdjustment(item, employee, 0, AdjustmentType.UPDATE, "Cập nhật giá bán thành: " + unitPrice + "đ");
+        createAdjustment(item, employee, 0, AdjustmentType.UPDATE, "Cáº­p nháº­t giÃ¡ bÃ¡n thÃ nh: " + unitPrice + "Ä‘");
         
         broadcastInventoryUpdate(response);
         return response;
     }
 
-    // ── ADJUSTMENT ──
+    // â”€â”€ ADJUSTMENT â”€â”€
 
     @Override
     @Transactional
@@ -164,7 +164,7 @@ public class InventoryServiceImpl implements IInventoryService {
         return expenseRepo.findByCreatedAtBetween(fromDate, toDate);
     }
 
-    // ── PRIVATE ──
+    // â”€â”€ PRIVATE â”€â”€
 
     private String createAdjustment(InventoryItem item, EmployeeProfile employee,
                                      int quantity, AdjustmentType type, String reason) {
@@ -205,15 +205,15 @@ public class InventoryServiceImpl implements IInventoryService {
 
     private InventoryItem findItemOrThrow(String id) {
         return inventoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư: " + id));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y váº­t tÆ°: " + id));
     }
 
     private EmployeeProfile findEmployeeOrThrow(String id) {
         return employeeRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên: " + id));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y nhÃ¢n viÃªn: " + id));
     }
 
-    // ── NEW: Deactivated items & Reactivation ──
+    // â”€â”€ NEW: Deactivated items & Reactivation â”€â”€
 
     @Override
     public List<InventoryCatalogueResponseDTO> getDeactivatedItems() {
@@ -226,20 +226,20 @@ public class InventoryServiceImpl implements IInventoryService {
     @Transactional
     public void reactivateItem(String id, String employeeId) {
         InventoryItem item = inventoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy vật tư: " + id));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y váº­t tÆ°: " + id));
         EmployeeProfile employee = findEmployeeOrThrow(employeeId);
         if (item.getIsActive()) {
-            throw new RuntimeException("Vật tư đang hoạt động, không cần khôi phục");
+            throw new RuntimeException("Váº­t tÆ° Ä‘ang hoáº¡t Ä‘á»™ng, khÃ´ng cáº§n khÃ´i phá»¥c");
         }
         item.setIsActive(true);
         InventoryCatalogueResponseDTO response = toResponse(inventoryRepo.save(item));
         
-        createAdjustment(item, employee, 0, AdjustmentType.REACTIVATE, "Khôi phục hoạt động vật tư");
+        createAdjustment(item, employee, 0, AdjustmentType.REACTIVATE, "KhÃ´i phá»¥c hoáº¡t Ä‘á»™ng váº­t tÆ°");
         
         broadcastInventoryUpdate(response);
     }
 
-    // ── NEW: Global adjustment history ──
+    // â”€â”€ NEW: Global adjustment history â”€â”€
 
     @Override
     public List<InventoryAdjustmentResponseDTO> getAllAdjustments() {

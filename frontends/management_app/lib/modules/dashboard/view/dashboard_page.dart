@@ -48,6 +48,24 @@ class _DashboardPageState extends State<DashboardPage>
           body: Center(child: CircularProgressIndicator()),
         );
       }
+      if (auth.hasAnyRole(['HOUSEKEEPER'])) {
+        // Redirect housekeeper to room list immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAllNamed('/housekeeper');
+        });
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (auth.hasAnyRole(['SERVICE_STAFF', 'STAFF'])) {
+        // Redirect service staff to order list immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAllNamed('/service-staff');
+        });
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
       if (auth.hasAnyRole(['OWNER'])) {
         final isWide = MediaQuery.of(context).size.width > 800;
         return Scaffold(
@@ -90,8 +108,8 @@ class _DashboardPageState extends State<DashboardPage>
           'Tạo và quản lý mã giảm giá, khuyến mãi',
           Icons.card_giftcard_outlined,
           const Color(0xFF7C3AED),
-          false,
-          null,
+          true,
+          () => Get.toNamed('/vouchers'),
         ),
         const SizedBox(height: 12),
         _ownerCard(
@@ -99,8 +117,17 @@ class _DashboardPageState extends State<DashboardPage>
           'Doanh thu, lợi nhuận, tỉ lệ lấp đầy',
           Icons.analytics_outlined,
           AppColors.info,
-          false,
-          null,
+          true,
+          () => Get.toNamed('/owner-dashboard'),
+        ),
+        const SizedBox(height: 12),
+        _ownerCard(
+          'Quản lý Phòng & Hạng phòng',
+          'Thiết lập phòng, tầng và hạng phòng',
+          Icons.meeting_room_outlined,
+          AppColors.success,
+          true,
+          () => Get.toNamed('/property'),
         ),
         const SizedBox(height: 12),
         _ownerCard(
@@ -177,65 +204,74 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       actions: [
         Obx(
-          () => Container(
-            margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Center(
-                    child: Text(
-                      (auth.fullName.value.isNotEmpty
-                              ? auth.fullName.value
-                              : auth.username.value.isNotEmpty
-                              ? auth.username.value
-                              : 'U')[0]
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+          () => GestureDetector(
+            onTap: () => Get.toNamed('/profile'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (auth.fullName.value.isNotEmpty
+                                ? auth.fullName.value
+                                : auth.username.value.isNotEmpty
+                                ? auth.username.value
+                                : 'U')[0]
+                            .toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      auth.fullName.value.isNotEmpty
-                          ? auth.fullName.value
-                          : auth.username.value.isNotEmpty
-                          ? auth.username.value
-                          : 'User',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        auth.fullName.value.isNotEmpty
+                            ? auth.fullName.value
+                            : auth.username.value.isNotEmpty
+                            ? auth.username.value
+                            : 'User',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _roleLabel(auth.roles.firstOrNull ?? ''),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white60,
+                      Text(
+                        _roleLabel(auth.roles.firstOrNull ?? ''),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: Colors.white60,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.edit_outlined,
+                    size: 13,
+                    color: Colors.white54,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -285,7 +321,7 @@ class _DashboardPageState extends State<DashboardPage>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.25),
+              color: AppColors.primary.withValues(alpha: 0.25),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -300,7 +336,7 @@ class _DashboardPageState extends State<DashboardPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -341,10 +377,10 @@ class _DashboardPageState extends State<DashboardPage>
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.2),
+                    color: AppColors.accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.accent.withOpacity(0.4),
+                      color: AppColors.accent.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Obx(
@@ -436,7 +472,7 @@ class _DashboardPageState extends State<DashboardPage>
         border: Border(top: BorderSide(color: color, width: 3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -448,7 +484,7 @@ class _DashboardPageState extends State<DashboardPage>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(icon, size: 20, color: color),
@@ -492,7 +528,7 @@ class _DashboardPageState extends State<DashboardPage>
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.04),
+      shadowColor: Colors.black.withValues(alpha: 0.04),
       child: InkWell(
         onTap: isReady ? onTap : null,
         borderRadius: BorderRadius.circular(16),
@@ -508,7 +544,7 @@ class _DashboardPageState extends State<DashboardPage>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, size: 22, color: color),
@@ -545,8 +581,8 @@ class _DashboardPageState extends State<DashboardPage>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isReady
-                      ? AppColors.success.withOpacity(0.1)
-                      : AppColors.textHint.withOpacity(0.1),
+                      ? AppColors.success.withValues(alpha: 0.1)
+                      : AppColors.textHint.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -603,7 +639,7 @@ class _DashboardPageState extends State<DashboardPage>
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       elevation: 3,
-      shadowColor: m.color.withOpacity(0.15),
+      shadowColor: m.color.withValues(alpha: 0.15),
       child: InkWell(
         onTap: m.isReady ? () => Get.toNamed(m.route) : null,
         borderRadius: BorderRadius.circular(18),
@@ -628,7 +664,7 @@ class _DashboardPageState extends State<DashboardPage>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: m.color.withOpacity(0.1),
+                      color: m.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(m.icon, size: 20, color: m.color),
@@ -641,8 +677,8 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                     decoration: BoxDecoration(
                       color: m.isReady
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.textHint.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.textHint.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -765,14 +801,6 @@ class _DashboardPageState extends State<DashboardPage>
         const Color(0xFF0891B2),
         false,
       ),
-      _Module(
-        'Khuyến mãi',
-        'Voucher & ưu đãi',
-        Icons.card_giftcard_outlined,
-        '/vouchers',
-        const Color(0xFF7C3AED),
-        false,
-      ),
     ];
   }
 
@@ -812,7 +840,7 @@ class _DashboardPageState extends State<DashboardPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.12),
+                    color: AppColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -906,10 +934,12 @@ class _DashboardPageState extends State<DashboardPage>
 
   String _greetingDetail() {
     final h = DateTime.now().hour;
-    if (h < 12)
+    if (h < 12) {
       return 'Buổi sáng là thời điểm lý tưởng để kiểm tra tình trạng phòng và lên kế hoạch.';
-    if (h < 18)
+    }
+    if (h < 18) {
       return 'Tiếp tục giám sát hoạt động và đảm bảo chất lượng dịch vụ trong suốt buổi chiều.';
+    }
     return 'Tổng kết hoạt động trong ngày và chuẩn bị cho ngày mai.';
   }
 

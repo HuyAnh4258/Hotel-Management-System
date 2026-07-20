@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
-import 'package:management_app/modules/operation_analysis/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
 
 class PricingPage extends StatefulWidget {
   const PricingPage({super.key});
@@ -38,14 +38,14 @@ class _PricingPageState extends State<PricingPage> {
     );
   }
 
-  Widget _wide(i, s) => Row(
+  Widget _wide(InventoryViewModel i, ServiceViewModel s) => Row(
     children: [
       Expanded(child: _invCol(i)),
       Container(width: 1, color: AppColors.border),
       Expanded(child: _svcCol(s)),
     ],
   );
-  Widget _narrow(i, s) => DefaultTabController(
+  Widget _narrow(InventoryViewModel i, ServiceViewModel s) => DefaultTabController(
     length: 2,
     child: Column(
       children: [
@@ -217,7 +217,7 @@ class _PricingPageState extends State<PricingPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      color: color.withOpacity(0.05),
+      color: color.withValues(alpha: 0.05),
       child: Row(
         children: [
           Icon(icon, size: 20, color: color),
@@ -273,7 +273,7 @@ class _PricingPageState extends State<PricingPage> {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
           color: active
-              ? AppColors.primary.withOpacity(0.1)
+              ? AppColors.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
         ),
@@ -395,7 +395,7 @@ class _PricingPageState extends State<PricingPage> {
   Widget _chip(String label, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(6),
     ),
     child: Text(
@@ -408,7 +408,7 @@ class _PricingPageState extends State<PricingPage> {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -456,7 +456,7 @@ class _PricingPageState extends State<PricingPage> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.15),
+                          color: AppColors.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(icon, color: AppColors.accent, size: 22),

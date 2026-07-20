@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 
+import '../../core/utils/api_utils.dart';
+
 class AuthApi {
   AuthApi._();
 
-  static const String baseUrl = 'http://10.0.2.2:8080/api/auth';
+  static final String baseUrl = '${getApiBaseUrl()}/api/auth';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -86,3 +88,4 @@ class AuthResponse {
     );
   }
 }
+

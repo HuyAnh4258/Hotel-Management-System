@@ -23,7 +23,7 @@ class ActionCardWidget extends StatelessWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       elevation: 2,
-      shadowColor: themeColor.withOpacity(0.12),
+      shadowColor: themeColor.withValues(alpha: 0.12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
@@ -43,7 +43,7 @@ class ActionCardWidget extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
+                      color: themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, size: 20, color: themeColor),

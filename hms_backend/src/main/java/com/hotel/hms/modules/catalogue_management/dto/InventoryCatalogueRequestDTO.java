@@ -10,18 +10,18 @@ import java.math.BigDecimal;
 @Builder
 public class InventoryCatalogueRequestDTO {
 
-    @NotBlank(message = "Tên vật tư không được trống")
-    @Size(max = 100, message = "Tên vật tư tối đa 100 ký tự")
+    @NotBlank(message = "TÃªn váº­t tÆ° khÃ´ng Ä‘Æ°á»£c trá»‘ng")
+    @Size(max = 100, message = "TÃªn váº­t tÆ° tá»‘i Ä‘a 100 kÃ½ tá»±")
     private String itemName;
 
-    @Size(max = 500, message = "Mô tả tối đa 500 ký tự")
+    @Size(max = 500, message = "MÃ´ táº£ tá»‘i Ä‘a 500 kÃ½ tá»±")
     private String description;
 
-    @NotNull(message = "Giá nhập không được trống")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Giá nhập phải lớn hơn 0")
-    @Digits(integer = 18, fraction = 2, message = "Định dạng giá không hợp lệ (tối đa 18 số)")
+    @NotNull(message = "GiÃ¡ nháº­p khÃ´ng Ä‘Æ°á»£c trá»‘ng")
+    @DecimalMin(value = "0.0", inclusive = false, message = "GiÃ¡ nháº­p pháº£i lá»›n hÆ¡n 0")
+    @Digits(integer = 18, fraction = 2, message = "Äá»‹nh dáº¡ng giÃ¡ khÃ´ng há»£p lá»‡ (tá»‘i Ä‘a 18 sá»‘)")
     private BigDecimal unitCost;
 
-    @Min(value = 0, message = "Ngưỡng tồn kho tối thiểu là 0")
+    @Min(value = 0, message = "NgÆ°á»¡ng tá»“n kho tá»‘i thiá»ƒu lÃ  0")
     private Integer threshold;
 }

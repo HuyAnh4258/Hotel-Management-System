@@ -151,7 +151,7 @@ class _InventoryPageState extends State<InventoryPage>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -163,7 +163,7 @@ class _InventoryPageState extends State<InventoryPage>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 22, color: color),
@@ -234,7 +234,7 @@ class _InventoryPageState extends State<InventoryPage>
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
+                    color: AppColors.primary.withValues(alpha: 0.25),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -400,59 +400,139 @@ class _InventoryPageState extends State<InventoryPage>
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(16), elevation: 2, shadowColor: Colors.black.withOpacity(0.06),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.06),
         child: InkWell(
-          onTap: () => _showItemActions(item, vm), borderRadius: BorderRadius.circular(16),
+          onTap: () => _showItemActions(item, vm),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border(left: BorderSide(color: color, width: 4))),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border(left: BorderSide(color: color, width: 4)),
+            ),
             padding: const EdgeInsets.all(16),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Row(children: [
-                Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(11)), child: Icon(Icons.inventory_2, size: 22, color: color)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.itemName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                      if (item.description != null && item.description!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(item.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ),
-                    ],
-                  ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Icon(Icons.inventory_2, size: 22, color: color),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.itemName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (item.description != null &&
+                              item.description!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                item.description!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "${item.stockQuantity}/${item.lowStockThreshold}",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppColors.textHint,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Text("${item.stockQuantity}/${item.lowStockThreshold}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color)),
-                const SizedBox(width: 6),
-                const Icon(Icons.chevron_right, size: 20, color: AppColors.textHint),
-              ]),
-              const SizedBox(height: 10),
-              Divider(height: 1, thickness: 0.5, color: AppColors.border),
-              const SizedBox(height: 8),
-              Row(children: [
-                _infoChip(Icons.shopping_cart_outlined, "Giá nhập", "${_fmt(item.unitCost)}đ"),
-                const SizedBox(width: 16),
-                _infoChip(Icons.sell_outlined, "Giá bán", item.isPriced ? "${_fmt(item.unitPrice!)}đ" : "Chưa đặt", item.isPriced ? AppColors.accent : AppColors.textHint),
-                const Spacer(),
-                if (item.isPriced) StatusChip(label: "SẴN BÁN", color: AppColors.success) else StatusChip(label: "CHƯA BÁN", color: AppColors.textHint),
-              ]),
-            ]),
+                const SizedBox(height: 10),
+                Divider(height: 1, thickness: 0.5, color: AppColors.border),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _infoChip(
+                      Icons.shopping_cart_outlined,
+                      "Giá nhập",
+                      "${_fmt(item.unitCost)}đ",
+                    ),
+                    const SizedBox(width: 16),
+                    _infoChip(
+                      Icons.sell_outlined,
+                      "Giá bán",
+                      item.isPriced ? "${_fmt(item.unitPrice!)}đ" : "Chưa đặt",
+                      item.isPriced ? AppColors.accent : AppColors.textHint,
+                    ),
+                    const Spacer(),
+                    if (item.isPriced)
+                      StatusChip(label: "SẴN BÁN", color: AppColors.success)
+                    else
+                      StatusChip(label: "CHƯA BÁN", color: AppColors.textHint),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _infoChip(IconData icon, String label, String value, [Color? valueColor]) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 14, color: AppColors.textSecondary),
-      const SizedBox(width: 4),
-      Text("$label: ", style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: valueColor ?? AppColors.textPrimary)),
-    ]);
+  Widget _infoChip(
+    IconData icon,
+    String label,
+    String value, [
+    Color? valueColor,
+  ]) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 4),
+        Text(
+          "$label: ",
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
   }
+
   Widget _buildGridItemCard(InventoryItem item, InventoryViewModel vm) {
     final color = _stockColor(item);
     return Container(
@@ -509,12 +589,16 @@ class _InventoryPageState extends State<InventoryPage>
                             : AppColors.textPrimary,
                       ),
                     ),
-                    if (item.description != null && item.description!.isNotEmpty)
+                    if (item.description != null &&
+                        item.description!.isNotEmpty)
                       Text(
                         item.description!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     const SizedBox(height: 3),
                     Text(
@@ -565,7 +649,7 @@ class _InventoryPageState extends State<InventoryPage>
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
@@ -587,7 +671,8 @@ class _InventoryPageState extends State<InventoryPage>
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          if (item.description != null && item.description!.isNotEmpty) ...[
+                          if (item.description != null &&
+                              item.description!.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               item.description!,
@@ -731,7 +816,7 @@ class _InventoryPageState extends State<InventoryPage>
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 22, color: color),
@@ -744,7 +829,10 @@ class _InventoryPageState extends State<InventoryPage>
             padding: const EdgeInsets.only(top: 2),
             child: Text(
               subtitle,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           trailing: const Icon(
@@ -756,7 +844,10 @@ class _InventoryPageState extends State<InventoryPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 4,
+          ),
         ),
       ),
     );
@@ -788,8 +879,12 @@ class _InventoryPageState extends State<InventoryPage>
                     filter['label']!,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.textSecondary,
                     ),
                   ),
                   selected: isSelected,
@@ -839,7 +934,7 @@ class _InventoryPageState extends State<InventoryPage>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -851,7 +946,7 @@ class _InventoryPageState extends State<InventoryPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: typeInfo.color.withOpacity(0.04),
+                color: typeInfo.color.withValues(alpha: 0.04),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
@@ -862,7 +957,7 @@ class _InventoryPageState extends State<InventoryPage>
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: typeInfo.color.withOpacity(0.12),
+                      color: typeInfo.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Icon(typeInfo.icon, size: 20, color: typeInfo.color),
@@ -899,8 +994,9 @@ class _InventoryPageState extends State<InventoryPage>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: (isPositive ? AppColors.success : AppColors.danger)
-                            .withOpacity(0.1),
+                        color:
+                            (isPositive ? AppColors.success : AppColors.danger)
+                                .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -908,8 +1004,9 @@ class _InventoryPageState extends State<InventoryPage>
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color:
-                              isPositive ? AppColors.success : AppColors.danger,
+                          color: isPositive
+                              ? AppColors.success
+                              : AppColors.danger,
                         ),
                       ),
                     ),
@@ -921,8 +1018,11 @@ class _InventoryPageState extends State<InventoryPage>
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Row(
                 children: [
-                  Icon(Icons.person_outline,
-                      size: 14, color: AppColors.textHint),
+                  Icon(
+                    Icons.person_outline,
+                    size: 14,
+                    color: AppColors.textHint,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     adj.employeeName,
@@ -970,34 +1070,64 @@ class _InventoryPageState extends State<InventoryPage>
     switch (type) {
       case 'RESTOCK':
         return _AdjustmentTypeInfo(
-            'Nhập kho', Icons.add_circle_outline, AppColors.success);
+          'Nhập kho',
+          Icons.add_circle_outline,
+          AppColors.success,
+        );
       case 'CONSUME':
         return _AdjustmentTypeInfo(
-            'Xuất kho', Icons.remove_circle_outline, AppColors.warning);
+          'Xuất kho',
+          Icons.remove_circle_outline,
+          AppColors.warning,
+        );
       case 'DAMAGE':
         return _AdjustmentTypeInfo(
-            'Báo hỏng', Icons.broken_image_outlined, const Color(0xFFF97316));
+          'Báo hỏng',
+          Icons.broken_image_outlined,
+          const Color(0xFFF97316),
+        );
       case 'RECONCILE':
         return _AdjustmentTypeInfo(
-            'Kiểm kê', Icons.balance_outlined, AppColors.info);
+          'Kiểm kê',
+          Icons.balance_outlined,
+          AppColors.info,
+        );
       case 'LOSS':
         return _AdjustmentTypeInfo(
-            'Thất thoát', Icons.report_problem_outlined, const Color(0xFFDC2626));
+          'Thất thoát',
+          Icons.report_problem_outlined,
+          const Color(0xFFDC2626),
+        );
       case 'AUTO_SELL':
         return _AdjustmentTypeInfo(
-            'Bán tự động', Icons.point_of_sale, AppColors.accent);
+          'Bán tự động',
+          Icons.point_of_sale,
+          AppColors.accent,
+        );
       case 'UPDATE':
         return _AdjustmentTypeInfo(
-            'Cập nhật', Icons.edit_note_rounded, AppColors.info);
+          'Cập nhật',
+          Icons.edit_note_rounded,
+          AppColors.info,
+        );
       case 'DEACTIVATE':
         return _AdjustmentTypeInfo(
-            'Vô hiệu hóa', Icons.delete_outline_rounded, const Color(0xFFEF4444));
+          'Vô hiệu hóa',
+          Icons.delete_outline_rounded,
+          const Color(0xFFEF4444),
+        );
       case 'REACTIVATE':
         return _AdjustmentTypeInfo(
-            'Khôi phục', Icons.settings_backup_restore_rounded, AppColors.success);
+          'Khôi phục',
+          Icons.settings_backup_restore_rounded,
+          AppColors.success,
+        );
       default:
         return _AdjustmentTypeInfo(
-            type, Icons.swap_vert, AppColors.textSecondary);
+          type,
+          Icons.swap_vert,
+          AppColors.textSecondary,
+        );
     }
   }
 
@@ -1033,13 +1163,13 @@ class _InventoryPageState extends State<InventoryPage>
           borderRadius: BorderRadius.circular(16),
           border: Border(
             left: BorderSide(
-              color: AppColors.textHint.withOpacity(0.4),
+              color: AppColors.textHint.withValues(alpha: 0.4),
               width: 4,
             ),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -1053,7 +1183,7 @@ class _InventoryPageState extends State<InventoryPage>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.textHint.withOpacity(0.08),
+                  color: AppColors.textHint.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -1077,10 +1207,20 @@ class _InventoryPageState extends State<InventoryPage>
                         decorationColor: AppColors.textHint,
                       ),
                     ),
-                    if (item.description != null && item.description!.isNotEmpty)
+                    if (item.description != null &&
+                        item.description!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Text(item.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textHint, fontStyle: FontStyle.italic)),
+                        child: Text(
+                          item.description!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textHint,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                       ),
                     const SizedBox(height: 4),
                     Row(
@@ -1107,7 +1247,7 @@ class _InventoryPageState extends State<InventoryPage>
               ),
               const SizedBox(width: 12),
               Material(
-                color: AppColors.success.withOpacity(0.1),
+                color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
                   onTap: () => _confirmReactivate(vm, item),
@@ -1157,13 +1297,13 @@ class _InventoryPageState extends State<InventoryPage>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: AppColors.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
               icon,
               size: 40,
-              color: AppColors.textHint.withOpacity(0.5),
+              color: AppColors.textHint.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 16),
@@ -1220,7 +1360,7 @@ class _InventoryPageState extends State<InventoryPage>
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.15),
+                          color: AppColors.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -1269,7 +1409,12 @@ class _InventoryPageState extends State<InventoryPage>
                       labelText: 'Giá nhập lẻ (VNĐ)',
                       hintText: 'Giá vốn nhập kho mỗi đơn vị',
                     ),
-                    validator: (v) { if (v!.trim().isEmpty) return 'Nhập giá'; if (double.tryParse(v.replaceAll(".", "").trim()) == null) return 'Giá không hợp lệ'; return null; },
+                    validator: (v) {
+                      if (v!.trim().isEmpty) return 'Nhập giá';
+                      if (double.tryParse(v.replaceAll(".", "").trim()) == null)
+                        return 'Giá không hợp lệ';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -1279,7 +1424,12 @@ class _InventoryPageState extends State<InventoryPage>
                       labelText: 'Ngưỡng tồn kho',
                       hintText: 'Số lượng tối thiểu cần có',
                     ),
-                    validator: (v) { if (v!.trim().isNotEmpty && int.tryParse(v.trim()) == null) return 'Số không hợp lệ'; return null; },
+                    validator: (v) {
+                      if (v!.trim().isNotEmpty &&
+                          int.tryParse(v.trim()) == null)
+                        return 'Số không hợp lệ';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 4),
                   const Padding(
@@ -1289,7 +1439,20 @@ class _InventoryPageState extends State<InventoryPage>
                       style: TextStyle(fontSize: 11, color: AppColors.textHint),
                     ),
                   ),
-                  Obx(() => vm.submitError.isNotEmpty ? Padding(padding: const EdgeInsets.only(top: 12), child: Text(vm.submitError.value, style: const TextStyle(fontSize: 12, color: AppColors.danger))) : const SizedBox()),
+                  Obx(
+                    () => vm.submitError.isNotEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              vm.submitError.value,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          )
+                        : const SizedBox(),
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -1317,8 +1480,9 @@ class _InventoryPageState extends State<InventoryPage>
                             onPressed: vm.isSubmitting.value
                                 ? null
                                 : () async {
-                                    if (!formKey.currentState!.validate())
+                                    if (!formKey.currentState!.validate()) {
                                       return;
+                                    }
                                     final err = isEdit
                                         ? await vm.updateItem(
                                             existing.itemId,
@@ -1350,14 +1514,28 @@ class _InventoryPageState extends State<InventoryPage>
                                     if (err == null) {
                                       if (isEdit) {
                                         Get.back();
-                                        Get.snackbar("Thành công", "Đã cập nhật vật tư", snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.success, colorText: Colors.white, duration: const Duration(seconds: 2));
+                                        Get.snackbar(
+                                          "Thành công",
+                                          "Đã cập nhật vật tư",
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: AppColors.success,
+                                          colorText: Colors.white,
+                                          duration: const Duration(seconds: 2),
+                                        );
                                       } else {
                                         nameCtrl.clear();
                                         descCtrl.clear();
                                         costCtrl.clear();
                                         thresholdCtrl.clear();
                                         formKey.currentState?.reset();
-                                        Get.snackbar("Thành công", "Đã tạo vật tư mới", snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.success, colorText: Colors.white, duration: const Duration(seconds: 2));
+                                        Get.snackbar(
+                                          "Thành công",
+                                          "Đã tạo vật tư mới",
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: AppColors.success,
+                                          colorText: Colors.white,
+                                          duration: const Duration(seconds: 2),
+                                        );
                                       }
                                     }
                                   },
@@ -1425,7 +1603,7 @@ class _InventoryPageState extends State<InventoryPage>
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
+                          color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(icon, color: color, size: 22),
@@ -1466,8 +1644,9 @@ class _InventoryPageState extends State<InventoryPage>
                     validator: (v) {
                       if (v!.trim().isEmpty) return 'Nhập số lượng';
                       final qty = int.tryParse(v.trim());
-                      if (qty == null || qty <= 0)
+                      if (qty == null || qty <= 0) {
                         return 'Số lượng không hợp lệ';
+                      }
                       return null;
                     },
                   ),
@@ -1479,7 +1658,20 @@ class _InventoryPageState extends State<InventoryPage>
                       hintText: 'Nhập lý do điều chỉnh...',
                     ),
                   ),
-                  Obx(() => vm.submitError.isNotEmpty ? Padding(padding: const EdgeInsets.only(top: 12), child: Text(vm.submitError.value, style: const TextStyle(fontSize: 12, color: AppColors.danger))) : const SizedBox()),
+                  Obx(
+                    () => vm.submitError.isNotEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              vm.submitError.value,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          )
+                        : const SizedBox(),
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -1508,8 +1700,9 @@ class _InventoryPageState extends State<InventoryPage>
                             onPressed: vm.isSubmitting.value
                                 ? null
                                 : () async {
-                                    if (!formKey.currentState!.validate())
+                                    if (!formKey.currentState!.validate()) {
                                       return;
+                                    }
                                     final err = await vm.adjustStock(
                                       item.itemId,
                                       int.parse(qtyCtrl.text.trim()),
@@ -1518,7 +1711,14 @@ class _InventoryPageState extends State<InventoryPage>
                                     );
                                     if (err == null) {
                                       Get.back();
-                                      Get.snackbar("Thành công", "Đã điều chỉnh tồn kho", snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.success, colorText: Colors.white, duration: const Duration(seconds: 2));
+                                      Get.snackbar(
+                                        "Thành công",
+                                        "Đã điều chỉnh tồn kho",
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: AppColors.success,
+                                        colorText: Colors.white,
+                                        duration: const Duration(seconds: 2),
+                                      );
                                     }
                                   },
                           ),
@@ -1552,7 +1752,7 @@ class _InventoryPageState extends State<InventoryPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.danger.withOpacity(0.1),
+                    color: AppColors.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -1645,7 +1845,7 @@ class _InventoryPageState extends State<InventoryPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(

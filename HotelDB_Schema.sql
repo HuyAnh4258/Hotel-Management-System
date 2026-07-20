@@ -461,6 +461,16 @@ CREATE TABLE ServiceOrder_Service (
 ) ENGINE=InnoDB;
 
 -- ============================================================
+-- 24. OtpCodes (Forgot Password OTP)
+-- ============================================================
+CREATE TABLE OtpCodes (
+    Email      VARCHAR(100) NOT NULL,
+    Otp        VARCHAR(6)   NOT NULL,
+    ExpireTime DATETIME     NOT NULL,
+    CONSTRAINT pk_otp_codes PRIMARY KEY (Email)
+) ENGINE=InnoDB;
+
+-- ============================================================
 -- SEED DATA
 -- ============================================================
 
@@ -481,7 +491,7 @@ INSERT INTO RoomType (RoomTypeId, TypeName, Description, BasePrice, MaxOccupancy
 -- Password for all users: Hotel@123 (BCrypt)
 INSERT INTO `User` (UserId, Username, Email, HashedPassword, IsActive, CreatedAt) VALUES
 ('USR-00000001', 'owner',        'owner@fptgolden.vn',        '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
-('USR-00000002', 'manager',      'manager@fptgolden.vn',      '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
+('USR-00000002', 'manager',      'myeternity002@gmail.com',      '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000003', 'receptionist', 'receptionist@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000004', 'servicestaff', 'servicestaff@fptgolden.vn', '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
 ('USR-00000005', 'housekeeper',  'housekeeper@fptgolden.vn',  '$2a$12$cs.P1KLaltzAiDCZiE3QoOfvhBcM2H0QONuJXPnnxPuk1/RGRYuRS', 1, NOW()),
@@ -517,13 +527,17 @@ INSERT INTO InventoryItem (ItemId, ItemName, StockQuantity, UnitCost, LowStockTh
 ('INV-00000009', 'Bia Heineken lon',    100, 12000, 20, 1, NOW(), NOW()),
 ('INV-00000010', 'Nước giặt công nghiệp', 8, 250000, 3,  1, NOW(), NOW());
 
-INSERT INTO Service (ServiceId, ServiceName, Description, UnitPrice, IsActive, CreatedAt, UpdatedAt) VALUES
-('SRV-00000001', 'Nước suối',          'Nước suối 500ml',              15000, 1, NOW(), NOW()),
-('SRV-00000002', 'Coca Cola',          'Coca Cola lon 330ml',          20000, 1, NOW(), NOW()),
-('SRV-00000003', 'Bia Heineken',       'Bia Heineken lon 330ml',       30000, 1, NOW(), NOW()),
-('SRV-00000004', 'Xà phòng tắm',       'Xà phòng tắm khách sạn',      25000, 1, NOW(), NOW()),
-('SRV-00000005', 'Giặt ủi',            'Dịch vụ giặt ủi quần áo',     50000, 1, NOW(), NOW()),
-('SRV-00000006', 'Ăn sáng buffet',     'Buffet sáng tại nhà hàng',   150000, 1, NOW(), NOW());
+INSERT INTO Service (ServiceId, ServiceName, Description, UnitPrice, IsComposite, IsActive) VALUES
+-- Dịch vụ đơn lẻ (IsComposite = 0)
+('SRV-00000001', 'Dịch vụ giặt ủi', 'Giặt sạch và sấy khô quần áo (theo kg)', 50000.00, 0, 1),
+('SRV-00000002', 'Đưa đón sân bay', 'Xe 7 chỗ đưa đón khách từ sân bay về khách sạn', 300000.00, 0, 1),
+('SRV-00000003', 'Massage chân', 'Gói massage chân thư giãn 45 phút', 250000.00, 0, 1),
+('SRV-00000004', 'Trang trí phòng', 'Trang trí hoa hồng và nến trong phòng', 400000.00, 0, 1),
+
+-- Dịch vụ trọn gói/Composite (IsComposite = 1)
+('SRV-00000101', 'Gói Sinh nhật Trọn gói', 'Bao gồm trang trí phòng + 1 bánh sinh nhật + nước uống', 800000.00, 1, 1),
+('SRV-00000102', 'Gói Spa Thư giãn', 'Bao gồm Massage chân + Xông hơi + Trà thảo mộc', 500000.00, 1, 1),
+('SRV-00000103', 'Combo Hạnh phúc', 'Đưa đón sân bay 2 chiều + Trang trí phòng tân hôn', 900000.00, 1, 1);
 
 INSERT INTO Room (RoomId, RoomTypeId, RoomName, FloorNumber, Status, Description, IsActive) VALUES
 ('101', 'RTP-00000001', 'Standard 101', 1, 'AVAILABLE', 'Phòng ở tầng 1', 1),
@@ -532,3 +546,15 @@ INSERT INTO Room (RoomId, RoomTypeId, RoomName, FloorNumber, Status, Description
 ('202', 'RTP-00000002', 'Deluxe 202', 2, 'OCCUPIED', 'Đã có khách thuê', 1),
 ('301', 'RTP-00000003', 'Family 301', 3, 'AVAILABLE', 'Phòng gia đình rộng rãi', 1),
 ('401', 'RTP-00000004', 'VIP Spa 401', 4, 'MAINTENANCE', 'Đang bảo trì bồn sục', 1);
+
+INSERT INTO Voucher (VoucherId, VoucherCode, DiscountPercent, MaxDiscountAmount, DiscountAmount, MinBookingValue, ExpiryTime, IsActive, CreatedAt) VALUES
+('VCH-00000001', 'WELCOMEGOLDEN', 10.00, 100000.00, NULL, 500000.00, '2028-12-31 23:59:59', 1, NOW()),
+('VCH-00000002', 'SUMMER2026', 15.00, 200000.00, NULL, 1000000.00, '2026-09-30 23:59:59', 1, NOW()),
+('VCH-00000003', 'FPTSTUDENT', NULL, NULL, 50000.00, 300000.00, '2027-06-30 23:59:59', 1, NOW()),
+('VCH-00000004', 'VIPMEMBER', 20.00, 500000.00, NULL, 2000000.00, '2028-01-01 00:00:00', 1, NOW()),
+('VCH-00000005', 'HAPPYBIRTHDAY', NULL, NULL, 150000.00, 800000.00, '2027-12-31 23:59:59', 1, NOW()),
+('VCH-00000006', 'WEEKENDLUX', 12.50, 300000.00, NULL, 1200000.00, '2027-12-31 23:59:59', 1, NOW()),
+('VCH-00000007', 'DISCOUNT50K', NULL, NULL, 50000.00, 200000.00, '2028-05-01 00:00:00', 1, NOW()),
+('VCH-00000008', 'DISCOUNT100K', NULL, NULL, 100000.00, 500000.00, '2028-05-01 00:00:00', 1, NOW()),
+('VCH-00000009', 'DISCOUNT200K', NULL, NULL, 200000.00, 1000000.00, '2028-05-01 00:00:00', 1, NOW()),
+('VCH-00000010', 'GRANDOPENING', 30.00, 1000000.00, NULL, 1500000.00, '2027-03-31 23:59:59', 1, NOW());

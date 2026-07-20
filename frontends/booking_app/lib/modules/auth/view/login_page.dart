@@ -37,10 +37,10 @@ class _LoginPageState extends State<LoginPage> {
         fit: StackFit.expand,
         children: [
           Image.network(_bgUrl, fit: BoxFit.cover),
-          Container(color: Colors.black.withOpacity(0.42)),
+          Container(color: Colors.black.withValues(alpha: 0.42)),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: Container(color: Colors.black.withOpacity(0.08)),
+            child: Container(color: Colors.black.withValues(alpha: 0.08)),
           ),
           Center(
             child: SingleChildScrollView(
@@ -130,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   width: 2,
                 ),
               ),
@@ -145,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   width: 2,
                 ),
               ),

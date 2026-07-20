@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/utils/api_utils.dart';
+
 class BookingApi {
   BookingApi._();
 
-  static const String baseUrl = 'http://10.0.2.2:8080/api/booking';
-  static const String serviceOrderBaseUrl =
-      'http://10.0.2.2:8080/api/service-orders';
+  static final String baseUrl = '${getApiBaseUrl()}/api/booking';
+  static final String serviceOrderBaseUrl = '${getApiBaseUrl()}/api/orders';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -190,7 +191,7 @@ class BookingApi {
   }
 
   static Future<List<ServiceOrderModel>> getServiceOrders() async {
-    final response = await _serviceOrderDio.get('');
+    final response = await _serviceOrderDio.get('/list');
     final data = response.data as List<dynamic>;
     return data
         .map(

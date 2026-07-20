@@ -10,15 +10,15 @@ import java.math.BigDecimal;
 @Builder
 public class ServiceRequestDTO {
 
-    @NotBlank(message = "Tên dịch vụ không được trống")
+    @NotBlank(message = "TÃªn dá»‹ch vá»¥ khÃ´ng Ä‘Æ°á»£c trá»‘ng")
     @Size(max = 100)
     private String serviceName;
 
     @Size(max = 500)
     private String description;
 
-    @NotNull(message = "Giá bán không được trống")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Giá phải lớn hơn 0")
+    @NotNull(message = "GiÃ¡ bÃ¡n khÃ´ng Ä‘Æ°á»£c trá»‘ng")
+    @DecimalMin(value = "0.0", inclusive = false, message = "GiÃ¡ pháº£i lá»›n hÆ¡n 0")
     @Digits(integer = 16, fraction = 2)
     private BigDecimal unitPrice;
 

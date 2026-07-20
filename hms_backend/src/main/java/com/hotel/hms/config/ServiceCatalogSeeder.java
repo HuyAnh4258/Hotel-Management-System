@@ -1,7 +1,7 @@
 package com.hotel.hms.config;
 
-import com.hotel.hms.entity.HotelService;
-import com.hotel.hms.repository.HotelServiceRepository;
+import com.hotel.hms.modules.booking_management.entity.HotelService;
+import com.hotel.hms.modules.booking_management.repository.HotelServiceRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
