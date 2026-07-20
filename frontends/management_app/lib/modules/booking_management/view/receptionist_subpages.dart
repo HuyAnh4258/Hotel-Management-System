@@ -1304,6 +1304,11 @@ Color _serviceOrderStatusColor(String status) {
 
 String _formatMoney(num value) => '${value.toStringAsFixed(0)} VND';
 
+num _moneyValue(dynamic value) {
+  if (value is num) return value;
+  return num.tryParse(value?.toString() ?? '') ?? 0;
+}
+
 class _StatusFilterChip extends StatelessWidget {
   const _StatusFilterChip({
     required this.label,
@@ -1370,6 +1375,9 @@ class _BookingCard extends StatelessWidget {
           ),
           Text('Checkin: ${booking.expectedCheckin}'),
           Text('Checkout: ${booking.expectedCheckout}'),
+          Text(
+            'Total payment: ${_formatMoney(_moneyValue(booking.totalAmount))}',
+          ),
           Text('Status: ${booking.status}'),
           const SizedBox(height: 12),
           Row(

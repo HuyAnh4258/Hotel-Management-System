@@ -72,9 +72,7 @@ public class ServiceOrderService {
     public ServiceOrderSummary createOrder(CreateServiceOrderRequest request) {
         Booking booking = bookingRepository.findById(request.bookingId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-        if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "CHECKED_OUT".equalsIgnoreCase(booking.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking is not active for service order");
-        }
+        ensureBookingCanAcceptOrder(booking);
 
         Map<String, Integer> requestedQuantities = normalizeRequestedServices(request.services());
         List<ServiceOrderLineSummary> lines = new ArrayList<>();
@@ -128,6 +126,7 @@ public class ServiceOrderService {
                     .executeUpdate();
         }
 
+        recalculateAndStoreBookingTotal(booking.getBookingId());
         return getOrder(orderId);
     }
 
@@ -146,6 +145,7 @@ public class ServiceOrderService {
         if (!UPDATE_STATUSES.contains(normalizedStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported order status");
         }
+        ServiceOrderSummary currentOrder = getOrder(orderId);
 
         int updated = entityManager.createNativeQuery("""
                 UPDATE `Order`
@@ -160,6 +160,7 @@ public class ServiceOrderService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
         }
 
+        recalculateAndStoreBookingTotal(currentOrder.bookingId());
         return getOrder(orderId);
     }
 
@@ -245,6 +246,10 @@ public class ServiceOrderService {
     }
 
     private Map<String, Integer> normalizeRequestedServices(List<ServiceOrderLineRequest> services) {
+        if (services == null || services.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "services is required");
+        }
+
         Map<String, Integer> quantities = new LinkedHashMap<>();
         for (ServiceOrderLineRequest line : services) {
             String serviceId = line.serviceId() == null ? "" : line.serviceId().trim();
@@ -257,6 +262,61 @@ public class ServiceOrderService {
             quantities.merge(serviceId, line.quantity(), Integer::sum);
         }
         return quantities;
+    }
+
+    private void ensureBookingCanAcceptOrder(Booking booking) {
+        String status = booking.getStatus() == null ? "" : booking.getStatus().trim().toUpperCase();
+        if (!List.of("PENDING", "CONFIRMED", "CHECKED_IN", "CANCEL_REJECTED").contains(status)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only active bookings can create service orders"
+            );
+        }
+
+        Number roomBookingCount = (Number) entityManager.createNativeQuery("""
+                SELECT COUNT(*)
+                FROM RoomBooking
+                WHERE BookingId = :bookingId
+                  AND UPPER(Status) <> 'CANCELLED'
+                  AND UPPER(Status) <> 'RELEASED'
+                """)
+                .setParameter("bookingId", booking.getBookingId())
+                .getSingleResult();
+
+        if (roomBookingCount.longValue() == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Booking must have at least one active room before creating service orders"
+            );
+        }
+    }
+
+    private void recalculateAndStoreBookingTotal(String bookingId) {
+        Object roomAmount = entityManager.createNativeQuery("""
+                SELECT COALESCE(SUM(PriceAtBooking), 0)
+                FROM RoomBooking
+                WHERE BookingId = :bookingId
+                """)
+                .setParameter("bookingId", bookingId)
+                .getSingleResult();
+
+        Object serviceAmount = entityManager.createNativeQuery("""
+                SELECT COALESCE(SUM(TotalAmount), 0)
+                FROM `Order`
+                WHERE BookingId = :bookingId
+                  AND UPPER(Status) <> 'CANCELLED'
+                """)
+                .setParameter("bookingId", bookingId)
+                .getSingleResult();
+
+        entityManager.createNativeQuery("""
+                UPDATE Booking
+                SET TotalAmount = :totalAmount
+                WHERE BookingId = :bookingId
+                """)
+                .setParameter("totalAmount", toBigDecimal(roomAmount).add(toBigDecimal(serviceAmount)))
+                .setParameter("bookingId", bookingId)
+                .executeUpdate();
     }
 
     private String findOrCreateDefaultEmployeeUserId() {
