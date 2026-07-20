@@ -9,10 +9,14 @@ class RoomTypeDetailPage extends StatelessWidget {
     super.key,
     required this.roomType,
     required this.availableRooms,
+    this.onViewFeedback,
+    this.onSubmitFeedback,
   });
 
   final RoomTypeModel roomType;
   final List<RoomModel> availableRooms;
+  final VoidCallback? onViewFeedback;
+  final VoidCallback? onSubmitFeedback;
 
   String _formatPrice(double price) => price.toStringAsFixed(0);
 
@@ -199,6 +203,57 @@ class RoomTypeDetailPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+            if (onViewFeedback != null || onSubmitFeedback != null) ...[
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Colors.white),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Review & Feedback',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Read guest reviews before booking, or submit feedback after your stay.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (onViewFeedback != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: onViewFeedback,
+                          icon: const Icon(Icons.reviews_rounded),
+                          label: const Text('View Review & Feedback'),
+                        ),
+                      ),
+                    if (onViewFeedback != null && onSubmitFeedback != null)
+                      const SizedBox(height: 10),
+                    if (onSubmitFeedback != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: onSubmitFeedback,
+                          icon: const Icon(Icons.rate_review_rounded),
+                          label: const Text('Submit Review & Feedback'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
             FilledButton.icon(
               onPressed: availableRooms.isEmpty
                   ? null

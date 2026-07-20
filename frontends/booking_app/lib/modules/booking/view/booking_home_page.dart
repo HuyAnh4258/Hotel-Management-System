@@ -17,6 +17,9 @@ class BookingHomePage extends StatefulWidget {
 
 class _BookingHomePageState extends State<BookingHomePage> {
   late Future<HomepageData> _homepageFuture;
+  Future<List<BookingSummary>>? _userBookingsFuture;
+  int _selectedIndex = 0;
+  String _roomTypeQuery = '';
 
   @override
   void initState() {
@@ -27,17 +30,47 @@ class _BookingHomePageState extends State<BookingHomePage> {
   Future<void> _reload() async {
     setState(() {
       _homepageFuture = BookingApi.getHomepage();
+      _userBookingsFuture = null;
     });
+  }
+
+  Future<List<BookingSummary>> _loadUserBookings() {
+    final authVm = Get.find<AuthViewModel>();
+    return BookingApi.getBookings(userId: authVm.currentUser.value?.userId);
+  }
+
+  Future<List<BookingSummary>> _ensureUserBookingsFuture() {
+    return _userBookingsFuture ??= _loadUserBookings();
+  }
+
+  Future<void> _reloadUserBookings() async {
+    setState(() {
+      _userBookingsFuture = _loadUserBookings();
+    });
+  }
+
+  String get _title {
+    switch (_selectedIndex) {
+      case 1:
+        return 'Booking Management';
+      case 2:
+        return 'Booking History';
+      case 3:
+        return 'User Profile';
+      default:
+        return 'Search Rooms';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authVm = Get.find<AuthViewModel>();
-    final fullName = authVm.currentUser.value?.fullName ?? 'khách';
+    final fullName = authVm.currentUser.value?.fullName ?? 'Guest';
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Hotel Booking'),
+        title: Text(_title),
         backgroundColor: Colors.transparent,
         actions: [
           if (authVm.isLoggedIn)
@@ -61,7 +94,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 20),
                 label: const Text(
-                  'Đăng xuất',
+                  'Logout',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -87,20 +120,46 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 ),
                 icon: const Icon(Icons.login_rounded, size: 20),
                 label: const Text(
-                  'Đăng nhập',
+                  'Login',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ),
         ],
       ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.search_rounded),
+            label: 'Search',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.book_online_rounded),
+            label: 'Booking',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_rounded),
+            label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFFFFB347),
-              const Color(0xFFFFD6A5),
-              const Color(0xFFFFF4E6),
+              Color(0xFFFFB347),
+              Color(0xFFFFD6A5),
+              Color(0xFFFFF4E6),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -108,7 +167,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
           ),
         ),
         child: RefreshIndicator(
-          onRefresh: _reload,
+          onRefresh: _selectedIndex == 0 ? _reload : _reloadUserBookings,
           child: FutureBuilder<HomepageData>(
             future: _homepageFuture,
             builder: (context, snapshot) {
@@ -125,58 +184,32 @@ class _BookingHomePageState extends State<BookingHomePage> {
               }
 
               final data = snapshot.data ?? HomepageData.empty();
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
-                children: [
-                  _GuestHeader(data: data, fullName: fullName),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Loại phòng',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (data.roomTypes.isEmpty)
-                    const Text('Chưa có loại phòng nào')
-                  else
-                    ...data.roomTypes.map(
-                      (roomType) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: RoomTypeCard(
-                          title: roomType.name,
-                          subtitle:
-                              '${roomType.description}\nGiá từ ${roomType.basePrice.toStringAsFixed(0)}',
-                          imagePath: roomType.imagePath,
-                          onTap: () async {
-                            if (!context.mounted) return;
-
-                            final changed = await Navigator.of(context)
-                                .push<bool>(
-                                  MaterialPageRoute(
-                                    builder: (_) => RoomTypeDetailPage(
-                                      roomType: roomType,
-                                      availableRooms: data.rooms
-                                          .where(
-                                            (room) =>
-                                                room.roomTypeId ==
-                                                roomType.roomTypeId,
-                                          )
-                                          .toList(),
-                                    ),
-                                  ),
-                                );
-
-                            if (changed == true || changed == null) {
-                              await _reload();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                ],
-              );
+              switch (_selectedIndex) {
+                case 1:
+                  return _BookingManagementTab(
+                    bookingsFuture: _ensureUserBookingsFuture(),
+                    onRefresh: _reloadUserBookings,
+                  );
+                case 2:
+                  return _BookingHistoryTab(
+                    bookingsFuture: _ensureUserBookingsFuture(),
+                    onRefresh: _reloadUserBookings,
+                  );
+                case 3:
+                  return const _UserProfileTab();
+                default:
+                  return _SearchRoomTypeTab(
+                    data: data,
+                    fullName: fullName,
+                    query: _roomTypeQuery,
+                    onQueryChanged: (value) {
+                      setState(() {
+                        _roomTypeQuery = value;
+                      });
+                    },
+                    onRoomChanged: _reload,
+                  );
+              }
             },
           ),
         ),
@@ -263,75 +296,449 @@ class _GuestHeader extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchRoomTypeTab extends StatelessWidget {
+  const _SearchRoomTypeTab({
+    required this.data,
+    required this.fullName,
+    required this.query,
+    required this.onQueryChanged,
+    required this.onRoomChanged,
+  });
+
+  final HomepageData data;
+  final String fullName;
+  final String query;
+  final ValueChanged<String> onQueryChanged;
+  final Future<void> Function() onRoomChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedQuery = query.trim().toLowerCase();
+    final roomTypes = data.roomTypes.where((roomType) {
+      if (normalizedQuery.isEmpty) return true;
+      return roomType.name.toLowerCase().contains(normalizedQuery) ||
+          roomType.description.toLowerCase().contains(normalizedQuery);
+    }).toList();
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+      children: [
+        _GuestHeader(data: data, fullName: fullName),
+        const SizedBox(height: 18),
+        _TaskSectionCard(
+          title: 'Search by room type',
+          subtitle:
+              'Find a room type, check reviews, then choose a room to book.',
+          icon: Icons.search_rounded,
+          child: TextField(
+            onChanged: onQueryChanged,
+            decoration: const InputDecoration(
+              labelText: 'Room type',
+              hintText: 'Suite, Deluxe, Superior...',
+              prefixIcon: Icon(Icons.search_rounded),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Room Types',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        if (roomTypes.isEmpty)
+          const Text('No room type matches your search')
+        else
+          ...roomTypes.map(
+            (roomType) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: RoomTypeCard(
+                title: roomType.name,
+                subtitle:
+                    '${roomType.description}\nPrice from ${roomType.basePrice.toStringAsFixed(0)}',
+                imagePath: roomType.imagePath,
+                onTap: () async {
+                  if (!context.mounted) return;
+
+                  final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => RoomTypeDetailPage(
+                        roomType: roomType,
+                        availableRooms: data.rooms
+                            .where(
+                              (room) => room.roomTypeId == roomType.roomTypeId,
+                            )
+                            .toList(),
+                        onViewFeedback: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FeedbackListPage(),
+                            ),
+                          );
+                        },
+                        onSubmitFeedback: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SubmitFeedbackPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+
+                  if (changed == true || changed == null) {
+                    await onRoomChanged();
+                  }
+                },
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BookingManagementTab extends StatelessWidget {
+  const _BookingManagementTab({
+    required this.bookingsFuture,
+    required this.onRefresh,
+  });
+
+  final Future<List<BookingSummary>> bookingsFuture;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BookingSummary>>(
+      future: bookingsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+            children: [_ErrorCard(onRetry: onRefresh)],
+          );
+        }
+
+        final activeBookings = (snapshot.data ?? [])
+            .where((booking) => !booking.isCancelled)
+            .toList();
+
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+          children: [
+            _TaskSectionCard(
+              title: 'Booking Management',
+              subtitle:
+                  'Manage your recent bookings and request services for your stay.',
+              icon: Icons.book_online_rounded,
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MakeServiceOrderPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.room_service_rounded),
+                      label: const Text('Make Order'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CancelServiceOrderPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.cancel_schedule_send_rounded),
+                      label: const Text('Cancel Order'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Your bookings',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            if (activeBookings.isEmpty)
+              const Text('No active bookings yet')
+            else
+              ...activeBookings.map(
+                (booking) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _CompactBookingCard(booking: booking),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BookingHistoryTab extends StatelessWidget {
+  const _BookingHistoryTab({
+    required this.bookingsFuture,
+    required this.onRefresh,
+  });
+
+  final Future<List<BookingSummary>> bookingsFuture;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BookingSummary>>(
+      future: bookingsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+            children: [_ErrorCard(onRetry: onRefresh)],
+          );
+        }
+
+        final bookings = snapshot.data ?? [];
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+          children: [
+            _TaskSectionCard(
+              title: 'Booking History',
+              subtitle: 'Review all booking requests made by your account.',
+              icon: Icons.history_rounded,
+              child: _Badge(
+                label: '${bookings.length} bookings',
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (bookings.isEmpty)
+              const Text('No booking history yet')
+            else
+              ...bookings.map(
+                (booking) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _CompactBookingCard(booking: booking),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _UserProfileTab extends StatelessWidget {
+  const _UserProfileTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final authVm = Get.find<AuthViewModel>();
+    final user = authVm.currentUser.value;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+      children: [
+        _TaskSectionCard(
+          title: 'User Profile',
+          subtitle: user == null
+              ? 'Sign in to manage your booking profile.'
+              : 'Manage the account information used for booking.',
+          icon: Icons.person_rounded,
+          child: user == null
+              ? SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => Get.toNamed('/login'),
+                    icon: const Icon(Icons.login_rounded),
+                    label: const Text('Login'),
+                  ),
+                )
+              : Column(
+                  children: [
+                    _ProfileRow(label: 'Full name', value: user.fullName),
+                    _ProfileRow(label: 'Username', value: user.username),
+                    _ProfileRow(label: 'Email', value: user.email),
+                    _ProfileRow(label: 'Phone', value: user.phone),
+                    _ProfileRow(
+                      label: 'Roles',
+                      value: user.roles.isEmpty
+                          ? 'Guest'
+                          : user.roles.join(', '),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: authVm.logout,
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Logout'),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TaskSectionCard extends StatelessWidget {
+  const _TaskSectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: scheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const OrderHistoryPage()),
-                );
-              },
-              icon: const Icon(Icons.receipt_long_rounded),
-              label: const Text('Lịch sử đơn hàng'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const MakeServiceOrderPage(),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactBookingCard extends StatelessWidget {
+  const _CompactBookingCard({required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  booking.guestName.isEmpty
+                      ? booking.bookingId
+                      : booking.guestName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-                );
-              },
-              icon: const Icon(Icons.room_service_rounded),
-              label: const Text('Make Order'),
-            ),
+                ),
+              ),
+              _Badge(label: booking.status, color: Colors.orange),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+          Text('Booking: ${booking.bookingId}'),
+          if (booking.rooms.isNotEmpty)
+            Text('Rooms: ${booking.rooms.join(", ")}'),
+          Text('Checkin: ${booking.expectedCheckin}'),
+          Text('Checkout: ${booking.expectedCheckout}'),
+          Text('Total: ${_formatMoney(_moneyValue(booking.totalAmount))}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileRow extends StatelessWidget {
+  const _ProfileRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CancelServiceOrderPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.cancel_schedule_send_rounded),
-              label: const Text('Cancel Order'),
+            width: 96,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FeedbackListPage()),
-                );
-              },
-              icon: const Icon(Icons.reviews_rounded),
-              label: const Text('View Review & Feedback'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SubmitFeedbackPage()),
-                );
-              },
-              icon: const Icon(Icons.rate_review_rounded),
-              label: const Text('Submit Review & Feedback'),
-            ),
-          ),
+          Expanded(child: Text(value.isEmpty ? 'Not provided' : value)),
         ],
       ),
     );
@@ -358,7 +765,10 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
   }
 
   Future<_MakeServiceOrderData> _loadData() async {
-    final bookingsFuture = BookingApi.getBookings();
+    final authVm = Get.find<AuthViewModel>();
+    final bookingsFuture = BookingApi.getBookings(
+      userId: authVm.currentUser.value?.userId,
+    );
     final servicesFuture = BookingApi.getServices();
     return _MakeServiceOrderData(
       bookings: await bookingsFuture,
@@ -561,12 +971,24 @@ class _CancelServiceOrderPageState extends State<CancelServiceOrderPage> {
   @override
   void initState() {
     super.initState();
-    _ordersFuture = BookingApi.getServiceOrders();
+    _ordersFuture = _loadUserServiceOrders();
+  }
+
+  Future<List<ServiceOrderModel>> _loadUserServiceOrders() async {
+    final authVm = Get.find<AuthViewModel>();
+    final bookings = await BookingApi.getBookings(
+      userId: authVm.currentUser.value?.userId,
+    );
+    final bookingIds = bookings.map((booking) => booking.bookingId).toSet();
+    final orders = await BookingApi.getServiceOrders();
+    return orders
+        .where((order) => bookingIds.contains(order.bookingId))
+        .toList();
   }
 
   Future<void> _reload() async {
     setState(() {
-      _ordersFuture = BookingApi.getServiceOrders();
+      _ordersFuture = _loadUserServiceOrders();
     });
   }
 
@@ -1013,7 +1435,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
   @override
   void initState() {
     super.initState();
-    _bookingsFuture = BookingApi.getBookings();
+    _bookingsFuture = _loadUserBookings();
   }
 
   @override
@@ -1024,8 +1446,13 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
 
   Future<void> _reload() async {
     setState(() {
-      _bookingsFuture = BookingApi.getBookings();
+      _bookingsFuture = _loadUserBookings();
     });
+  }
+
+  Future<List<BookingSummary>> _loadUserBookings() {
+    final authVm = Get.find<AuthViewModel>();
+    return BookingApi.getBookings(userId: authVm.currentUser.value?.userId);
   }
 
   Future<void> _submit() async {

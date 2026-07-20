@@ -103,6 +103,19 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
+    public List<BookingSummary> getBookingsForGuestByDate(String userId, LocalDate date) {
+        if (date == null) {
+            return getBookingsForGuest(userId);
+        }
+
+        return getBookingsForGuest(userId).stream()
+                .filter(booking ->
+                        (booking.expectedCheckin() != null && booking.expectedCheckin().startsWith(date.toString()))
+                                || (booking.expectedCheckout() != null && booking.expectedCheckout().startsWith(date.toString())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<BookingSummary> getBookingsByDate(LocalDate date) {
         return bookingRepository.findAll().stream()
                 .map(this::toBookingSummary)
