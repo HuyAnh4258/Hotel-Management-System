@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
-import 'package:management_app/modules/operation_analysis/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
 
 class PricingPage extends StatefulWidget {
   const PricingPage({super.key});

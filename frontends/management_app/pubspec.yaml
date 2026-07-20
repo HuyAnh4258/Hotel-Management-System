@@ -14,7 +14,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   dio: ^5.10.0
   get: ^4.7.3
-  dio: ^5.4.0
   intl: ^0.19.0
   hms_shared:
     path: ../hms_shared

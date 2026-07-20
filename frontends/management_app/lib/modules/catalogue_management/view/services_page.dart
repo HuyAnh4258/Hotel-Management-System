@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/core/widgets/app_widgets.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
-import 'package:management_app/modules/operation_analysis/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
 
 class ServicesPage extends StatefulWidget {
   const ServicesPage({super.key});
