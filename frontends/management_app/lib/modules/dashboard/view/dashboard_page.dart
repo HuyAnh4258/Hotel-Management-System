@@ -195,7 +195,7 @@ class _DashboardPageState extends State<DashboardPage>
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
               Text(
-                'Management',
+                'Quản lý',
                 style: TextStyle(fontSize: 10, color: Colors.white60),
               ),
             ],

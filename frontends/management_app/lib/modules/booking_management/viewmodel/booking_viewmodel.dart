@@ -1,11 +1,21 @@
+import 'dart:io' show Platform;
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BookingApi {
   BookingApi._();
 
-  static const String baseUrl = 'http://10.0.2.2:8080/api/booking';
-  static const String serviceOrderBaseUrl =
-      'http://10.0.2.2:8080/api/service-orders';
+  static String get _apiBaseUrl {
+    if (kIsWeb) return 'http://localhost:8080';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
+    } catch (_) {}
+    return 'http://localhost:8080';
+  }
+
+  static String get baseUrl => '$_apiBaseUrl/api/booking';
+  static String get serviceOrderBaseUrl => '$_apiBaseUrl/api/orders';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -190,7 +200,7 @@ class BookingApi {
   }
 
   static Future<List<ServiceOrderModel>> getServiceOrders() async {
-    final response = await _serviceOrderDio.get('');
+    final response = await _serviceOrderDio.get('/list');
     final data = response.data as List<dynamic>;
     return data
         .map(
@@ -488,7 +498,7 @@ class ServiceOrderModel {
 
   bool get canGuestCancel {
     final normalized = status.toUpperCase();
-    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+    return normalized == 'IN_PROGRESS';
   }
 
   factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {

@@ -221,14 +221,14 @@ class RoomTypeDetailPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Review & Feedback',
+                      'Đánh giá & phản hồi',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Read guest reviews before booking, or submit feedback after your stay.',
+                      'Xem đánh giá trước khi đặt phòng hoặc gửi phản hồi sau khi trải nghiệm.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey.shade700,
                         height: 1.4,
@@ -241,7 +241,7 @@ class RoomTypeDetailPage extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: onViewFeedback,
                           icon: const Icon(Icons.reviews_rounded),
-                          label: const Text('View Review & Feedback'),
+                          label: const Text('Xem đánh giá & phản hồi'),
                         ),
                       ),
                     if (onViewFeedback != null && onSubmitFeedback != null)
@@ -252,7 +252,7 @@ class RoomTypeDetailPage extends StatelessWidget {
                         child: FilledButton.icon(
                           onPressed: onSubmitFeedback,
                           icon: const Icon(Icons.rate_review_rounded),
-                          label: const Text('Submit Review & Feedback'),
+                          label: const Text('Gửi đánh giá & phản hồi'),
                         ),
                       ),
                   ],
@@ -722,7 +722,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
           content: Text(
             widget.changeBookingId != null
                 ? 'Đổi phòng thành công'
-                : 'Đặt phòng thành công, trạng thái PENDING',
+                : 'Đặt phòng thành công, trạng thái đang chờ',
           ),
         ),
       );
@@ -942,7 +942,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
                               ? null
                               : () => Navigator.of(context).pop(false),
                           icon: const Icon(Icons.arrow_back_rounded),
-                          label: const Text('Cancel & Back'),
+                          label: const Text('Hủy và quay lại'),
                         ),
                       ),
                       const SizedBox(width: 12),

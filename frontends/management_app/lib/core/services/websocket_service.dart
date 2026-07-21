@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
@@ -5,6 +8,14 @@ import 'package:management_app/modules/catalogue_management/viewmodel/service_vi
 
 class WebSocketService extends GetxService {
   StompClient? _client;
+
+  String get _wsUrl {
+    if (kIsWeb) return 'ws://localhost:8080/ws';
+    try {
+      if (Platform.isAndroid) return 'ws://10.0.2.2:8080/ws';
+    } catch (_) {}
+    return 'ws://localhost:8080/ws';
+  }
 
   @override
   void onInit() {
@@ -15,7 +26,7 @@ class WebSocketService extends GetxService {
   void _connect() {
     _client = StompClient(
       config: StompConfig(
-        url: 'ws://localhost:8080/ws',
+        url: _wsUrl,
         onConnect: _onConnect,
         onWebSocketError: (dynamic e) =>
             print('WebSocket connection error: $e'),

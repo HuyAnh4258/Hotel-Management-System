@@ -198,6 +198,19 @@ class BookingApi {
         .toList();
   }
 
+  static Future<List<ServiceOrderModel>> getServiceOrdersByBooking(
+    String bookingId,
+  ) async {
+    final response = await _serviceOrderDio.get('/booking/$bookingId');
+    final data = response.data as List<dynamic>;
+    return data
+        .map(
+          (e) =>
+              ServiceOrderModel.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+  }
+
   static Future<ServiceOrderModel> createServiceOrder(
     CreateServiceOrderPayload payload,
   ) async {
@@ -473,7 +486,7 @@ class ServiceOrderModel {
 
   bool get canGuestCancel {
     final normalized = status.toUpperCase();
-    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+    return normalized == 'IN_PROGRESS';
   }
 
   factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {
