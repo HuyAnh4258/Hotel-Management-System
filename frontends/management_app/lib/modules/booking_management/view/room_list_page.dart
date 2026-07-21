@@ -32,13 +32,13 @@ class _RoomListPageState extends State<RoomListPage>
   String _getTabLabel(String status) {
     switch (status) {
       case 'DIRTY':
-        return 'Chưa dọn';
+        return 'Chưa dọn (DIRTY)';
       case 'CLEANING':
-        return 'Đang dọn';
+        return 'Đang dọn (CLEANING)';
       case 'AVAILABLE':
-        return 'Đã dọn (Sẵn sàng)';
+        return 'Sẵn sàng (AVAILABLE)';
       case 'MAINTENANCE':
-        return 'Bảo trì';
+        return 'Bảo trì (MAINTENANCE)';
       default:
         return status;
     }
@@ -52,8 +52,8 @@ class _RoomListPageState extends State<RoomListPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Quản lý Buồng phòng',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          '[ HMS - UPDATE ROOM STATUS ]',
+          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace'),
         ),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
@@ -79,12 +79,27 @@ class _RoomListPageState extends State<RoomListPage>
         ),
       ),
       body: Container(
-        color: Colors.grey.shade50,
-        child: TabBarView(
-          controller: _tabController,
-          children: _tabs
-              .map((status) => _RoomListTab(status: status))
-              .toList(),
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Role: Housekeeper | Module: Housekeeping',
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: _tabs
+                    .map((status) => _RoomListTab(status: status))
+                    .toList(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -158,68 +173,169 @@ class _RoomListTabState extends State<_RoomListTab> {
     }
   }
 
-  void _showActionDialog(RoomModel room) {
-    showModalBottomSheet(
+  void _showMarkCleanConfirm(RoomModel room) {
+    showDialog<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Cập nhật trạng thái phòng ${room.roomId}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              if (room.status == 'DIRTY') ...[
-                ListTile(
-                  leading: const Icon(
-                    Icons.cleaning_services,
-                    color: Colors.blue,
-                  ),
-                  title: const Text('Bắt đầu dọn dẹp (CLEANING)'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateStatus(room.roomId, 'CLEANING');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.build, color: Colors.red),
-                  title: const Text('Báo cáo hư hỏng (MAINTENANCE)'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateStatus(room.roomId, 'MAINTENANCE');
-                  },
-                ),
-              ],
-              if (room.status == 'CLEANING') ...[
-                ListTile(
-                  leading: const Icon(Icons.check_circle, color: Colors.green),
-                  title: const Text('Dọn xong (Sẵn sàng đón khách)'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateStatus(
-                      room.roomId,
-                      'AVAILABLE',
-                    ); // CLEAN maps to AVAILABLE
-                  },
-                ),
-              ],
-              if (room.status == 'AVAILABLE' || room.status == 'MAINTENANCE')
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('Phòng hiện không cần dọn hoặc đang bảo trì.'),
-                ),
-            ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('CONFIRM TASK COMPLETION', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+        content: Text(
+          "Are you sure you want to change Room ${room.roomId} to 'Clean'?\nBR-22 Applied: Mandatory for check-out verification.",
+          style: const TextStyle(fontFamily: 'monospace'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel/Close'),
           ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _updateStatus(room.roomId, 'AVAILABLE');
+            },
+            child: const Text('Confirm Execution'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMaintenanceForm(RoomModel room) {
+    final issueTypeController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    // Default options
+    final List<String> issues = [
+      'AC Not Working',
+      'Plumbing Issue',
+      'Electrical Issue',
+      'Furniture Damage',
+      'Other'
+    ];
+    String selectedIssue = issues.first;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: StatefulBuilder(builder: (context, setStateModal) {
+            return Container(
+              width: 500,
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('[ HMS - REQUEST ROOM MAINTENANCE ]', 
+                      style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    const Text('Role: Housekeeper \t\t Module: Receptioning', style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    const Text('REQUEST ROOM MAINTENANCE', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('ROOM NUMBER', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              TextField(
+                                readOnly: true,
+                                controller: TextEditingController(text: room.roomId),
+                                decoration: const InputDecoration(border: OutlineInputBorder()),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('ISSUE TYPE', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(4)
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: selectedIssue,
+                                    isExpanded: true,
+                                    items: issues.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setStateModal(() => selectedIssue = val);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('FAULT DESCRIPTION', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('UPLOAD IMAGE', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        OutlinedButton(onPressed: () {}, child: const Text('Choose File', style: TextStyle(color: Colors.black))),
+                        const SizedBox(width: 8),
+                        const Text('No file chosen', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          if (descriptionController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter fault description')));
+                            return;
+                          }
+                          try {
+                            final auth = Get.find<AuthService>();
+                            // In a real app we'd get the actual user ID. For now we use the username or EMP-00000005.
+                            // The database has EMP-00000005 for Housekeeper. We will use USR-00000005 since ReporterId references UserId.
+                            final userId = 'USR-00000005'; 
+                            await RoomApi.createMaintenanceRequest(room.roomId, userId, selectedIssue, descriptionController.text);
+                            if (!context.mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maintenance request submitted'), backgroundColor: Colors.green));
+                            _loadRooms();
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.black, width: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+                        ),
+                        child: const Text('[ SUBMIT REQUEST ]', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Colors.black)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         );
-      },
+      }
     );
   }
 
@@ -245,7 +361,7 @@ class _RoomListTabState extends State<_RoomListTab> {
                   padding: EdgeInsets.only(top: 100),
                   child: Center(
                     child: Text(
-                      'Không có phòng nào trong trạng thái này',
+                      'No rooms in this state.',
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                   ),
@@ -254,126 +370,75 @@ class _RoomListTabState extends State<_RoomListTab> {
             );
           }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: rooms.length,
-            itemBuilder: (context, index) {
-              final room = rooms[index];
-              return Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: _getStatusColor(room.status).withValues(alpha: 0.5),
-                    width: 1,
-                  ),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => _showActionDialog(room),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          _getStatusColor(room.status).withValues(alpha: 0.1),
-                          Colors.white,
-                        ],
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _getStatusIcon(room.status),
-                          size: 40,
-                          color: _getStatusColor(room.status),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          room.roomId,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          room.roomTypeName,
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(room.status),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            room.status,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('ACTIVE TASKS LIST (IN PROGRESS)', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    Text('CURRENTLY ${widget.status}', style: const TextStyle(fontFamily: 'monospace', fontSize: 14)),
+                    const SizedBox(height: 16),
+                    DataTable(
+                      headingRowColor: WidgetStateProperty.all(Colors.grey.shade300),
+                      border: TableBorder.all(color: Colors.grey.shade400, width: 1),
+                      columns: const [
+                        DataColumn(label: Text('ROOM NUMBER', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('ROOM TYPE', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('START TIME', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('ASSIGNED TO', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('ACTION', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
                       ],
+                      rows: rooms.map((room) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(room.roomId, style: const TextStyle(fontFamily: 'monospace'))),
+                            DataCell(Text(room.roomTypeName, style: const TextStyle(fontFamily: 'monospace'))),
+                            DataCell(const Text('10:30 AM', style: TextStyle(fontFamily: 'monospace'))), // Mocked as per image
+                            DataCell(const Text('You', style: TextStyle(fontFamily: 'monospace'))), // Mocked as per image
+                            DataCell(
+                              Row(
+                                children: [
+                                  if (room.status == 'DIRTY') ...[
+                                    ElevatedButton(
+                                      onPressed: () => _updateStatus(room.roomId, 'CLEANING'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+                                      child: const Text('[ Start Cleaning ]', style: TextStyle(fontFamily: 'monospace')),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () => _showMaintenanceForm(room),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+                                      child: const Text('[ Request Maint. ]', style: TextStyle(fontFamily: 'monospace')),
+                                    ),
+                                  ],
+                                  if (room.status == 'CLEANING')
+                                    ElevatedButton(
+                                      onPressed: () => _showMarkCleanConfirm(room),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+                                      child: const Text('[ Mark as Clean ]', style: TextStyle(fontFamily: 'monospace')),
+                                    ),
+                                  if (room.status == 'AVAILABLE' || room.status == 'MAINTENANCE')
+                                    const Text('No Action', style: TextStyle(fontFamily: 'monospace', color: Colors.grey)),
+                                ],
+                              )
+                            ),
+                          ]
+                        );
+                      }).toList(),
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           );
         },
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'DIRTY':
-        return Colors.brown;
-      case 'CLEANING':
-        return Colors.blue;
-      case 'AVAILABLE':
-        return Colors.green;
-      case 'MAINTENANCE':
-        return Colors.red;
-      case 'OCCUPIED':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'DIRTY':
-        return Icons.delete_outline;
-      case 'CLEANING':
-        return Icons.cleaning_services;
-      case 'AVAILABLE':
-        return Icons.check_circle_outline;
-      case 'MAINTENANCE':
-        return Icons.build;
-      case 'OCCUPIED':
-        return Icons.bed;
-      default:
-        return Icons.room;
-    }
   }
 }
