@@ -39,6 +39,18 @@ class RoomApi {
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+  static Future<void> createMaintenanceRequest(String roomId, String reporterId, String issueType, String description) async {
+    final baseUrl = _baseUrl.replaceAll('/rooms', '/maintenance/request');
+    await _dio.post(
+      baseUrl,
+      data: {
+        'roomId': roomId,
+        'reporterId': reporterId,
+        'issueType': issueType,
+        'description': description,
+      },
+    );
+  }
 }
 
 // ================== MODELS ==================
