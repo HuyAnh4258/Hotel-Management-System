@@ -224,7 +224,7 @@ class _LoginPageState extends State<LoginPage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Hotel Management System',
+                                      'Hệ thống quản lý khách sạn',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.white60,
@@ -307,7 +307,7 @@ class _LoginPageState extends State<LoginPage>
                         ),
                         const SizedBox(height: 14),
                         const Text(
-                          'Hotel Management System',
+                          'Hệ thống quản lý khách sạn',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,

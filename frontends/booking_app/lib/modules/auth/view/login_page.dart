@@ -160,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Booking',
+                    'Đặt phòng',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 46,
@@ -170,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Hotel Management System',
+                    'Hệ thống quản lý khách sạn',
                     style: TextStyle(
                       color: Color(0xFFD7DEEE),
                       fontSize: 18,
@@ -295,7 +295,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Tài khoản đăng ký sẽ dùng để đặt phòng Booking',
+                    'Tài khoản đăng ký sẽ dùng cho ứng dụng đặt phòng',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                   ),

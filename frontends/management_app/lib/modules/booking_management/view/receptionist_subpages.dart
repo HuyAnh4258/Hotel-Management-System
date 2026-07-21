@@ -660,16 +660,23 @@ class _RoomStatusCard extends StatelessWidget {
 }
 
 class ServiceOrderStatusPage extends StatefulWidget {
-  const ServiceOrderStatusPage({super.key, required this.canUpdate});
-
-  final bool canUpdate;
+  const ServiceOrderStatusPage({super.key});
 
   @override
   State<ServiceOrderStatusPage> createState() => _ServiceOrderStatusPageState();
 }
 
 class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
+  static const _statusFilters = [
+    'ALL',
+    'PENDING',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'CANCELLED',
+  ];
+
   late Future<List<ServiceOrderModel>> _ordersFuture;
+  String _selectedStatus = 'ALL';
 
   @override
   void initState() {
@@ -684,21 +691,35 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
   }
 
   Future<void> _update(ServiceOrderModel order, String status) async {
-    await BookingApi.updateServiceOrderStatus(order.orderId, status);
+    try {
+      await BookingApi.updateServiceOrderStatus(order.orderId, status);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated ${order.orderId} to $status')),
+      );
+      await _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cập nhật thất bại: $e')));
+    }
+  }
+
+  Future<void> _copyInvoice(ServiceOrderModel order) async {
+    await Clipboard.setData(ClipboardData(text: _buildInvoiceText(order)));
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Updated ${order.orderId} to $status')),
+      SnackBar(content: Text('Đã sao chép hóa đơn cho ${order.orderId}')),
     );
-    await _reload();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final title = widget.canUpdate
-        ? 'Update Order Status'
-        : 'View Order Status';
+    const title = 'Danh sách đơn dịch vụ';
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -732,17 +753,55 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
                 );
               }
 
-              final orders = snapshot.data ?? [];
+              final allOrders = snapshot.data ?? [];
+              final orders = _selectedStatus == 'ALL'
+                  ? allOrders
+                  : allOrders
+                        .where(
+                          (order) =>
+                              order.status.toUpperCase() == _selectedStatus,
+                        )
+                        .toList();
+
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
                 children: [
                   _ServiceOrderHeader(
                     title: title,
-                    subtitle: widget.canUpdate
-                        ? 'Receptionist updates service order progress.'
-                        : 'Receptionist views all service order statuses.',
+                    subtitle:
+                        'Receptionist reviews pending orders, updates progress, and exports completed invoices.',
                     totalOrders: orders.length,
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _statusFilters.map((status) {
+                        final selected = _selectedStatus == status;
+                        final count = status == 'ALL'
+                            ? allOrders.length
+                            : allOrders
+                                  .where(
+                                    (order) =>
+                                        order.status.toUpperCase() == status,
+                                  )
+                                  .length;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            selected: selected,
+                            label: Text('${_statusLabel(status)} ($count)'),
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedStatus = status;
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   if (orders.isEmpty)
@@ -751,10 +810,13 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
                     ...orders.map(
                       (order) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _ServiceOrderCard(
+                        child: _UnifiedServiceOrderCard(
                           order: order,
-                          canUpdate: widget.canUpdate,
                           onUpdate: (status) => _update(order, status),
+                          onCopyInvoice: order.status.toUpperCase() ==
+                                  'COMPLETED'
+                              ? () => _copyInvoice(order)
+                              : null,
                         ),
                       ),
                     ),
@@ -765,6 +827,129 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
         ),
       ),
     );
+  }
+}
+
+class _UnifiedServiceOrderCard extends StatelessWidget {
+  const _UnifiedServiceOrderCard({
+    required this.order,
+    required this.onUpdate,
+    required this.onCopyInvoice,
+  });
+
+  final ServiceOrderModel order;
+  final ValueChanged<String> onUpdate;
+  final VoidCallback? onCopyInvoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextStatuses = _nextOrderStatuses(order.status);
+
+    return _OrderInfoCard(
+      order: order,
+      footer: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ...nextStatuses.map(
+            (status) => FilledButton.icon(
+              onPressed: () => onUpdate(status),
+              icon: Icon(_statusIcon(status)),
+              label: Text(_statusActionLabel(status)),
+            ),
+          ),
+          if (onCopyInvoice != null)
+            OutlinedButton.icon(
+              onPressed: onCopyInvoice,
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('Sao chép hóa đơn'),
+            ),
+          if (nextStatuses.isEmpty && onCopyInvoice == null)
+            const Text(
+              'No more actions for this order.',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+List<String> _nextOrderStatuses(String currentStatus) {
+  switch (currentStatus.toUpperCase()) {
+    case 'PENDING':
+      return const ['IN_PROGRESS', 'CANCELLED'];
+    case 'IN_PROGRESS':
+      return const ['COMPLETED', 'CANCELLED'];
+    default:
+      return const [];
+  }
+}
+
+String _statusLabel(String status) {
+  switch (status.toUpperCase()) {
+    case 'ALL':
+      return 'Tất cả';
+    case 'PENDING':
+      return 'Đang chờ';
+    case 'IN_PROGRESS':
+      return 'Đang xử lý';
+    case 'COMPLETED':
+      return 'Hoàn tất';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    default:
+      return status;
+  }
+}
+
+String _serviceOrderStatusLabel(String status) => _statusLabel(status);
+
+String _bookingStatusText(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return 'Đang chờ';
+    case 'CONFIRMED':
+      return 'Đã xác nhận';
+    case 'CHECKED_IN':
+      return 'Đã nhận phòng';
+    case 'CHECKED_OUT':
+    case 'COMPLETED':
+      return 'Đã trả phòng';
+    case 'WAITING_APPROVAL':
+      return 'Đợi duyệt hủy';
+    case 'CANCEL_REJECTED':
+      return 'Từ chối hủy';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    default:
+      return status;
+  }
+}
+
+String _statusActionLabel(String status) {
+  switch (status.toUpperCase()) {
+    case 'IN_PROGRESS':
+      return 'Duyệt / Đang xử lý';
+    case 'COMPLETED':
+      return 'Hoàn tất';
+    case 'CANCELLED':
+      return 'Hủy';
+    default:
+      return _statusLabel(status);
+  }
+}
+
+IconData _statusIcon(String status) {
+  switch (status.toUpperCase()) {
+    case 'IN_PROGRESS':
+      return Icons.play_arrow_rounded;
+    case 'COMPLETED':
+      return Icons.check_circle_outline_rounded;
+    case 'CANCELLED':
+      return Icons.cancel_schedule_send_rounded;
+    default:
+      return Icons.sync_rounded;
   }
 }
 
@@ -843,7 +1028,7 @@ class _ServiceOrderWorkflowPageState extends State<_ServiceOrderWorkflowPage> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Invoice copied for ${order.orderId}')),
+      SnackBar(content: Text('Đã sao chép hóa đơn cho ${order.orderId}')),
     );
   }
 
@@ -978,7 +1163,7 @@ class _ProcessOrderCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onStart,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Start Process'),
+                label: const Text('Bắt đầu xử lý'),
               ),
             ),
           if (onStart != null && onComplete != null) const SizedBox(width: 8),
@@ -987,7 +1172,7 @@ class _ProcessOrderCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onComplete,
                 icon: const Icon(Icons.check_circle_outline_rounded),
-                label: const Text('Complete Order'),
+                label: const Text('Hoàn tất đơn'),
               ),
             ),
         ],
@@ -1011,7 +1196,7 @@ class _InvoiceOrderCard extends StatelessWidget {
         child: FilledButton.icon(
           onPressed: onCopy,
           icon: const Icon(Icons.copy_rounded),
-          label: const Text('Copy Invoice'),
+          label: const Text('Sao chép hóa đơn'),
         ),
       ),
     );
@@ -1053,10 +1238,10 @@ class _OrderInfoCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('Order: ${order.orderId}'),
-          Text('Booking: ${order.bookingId}'),
-          Text('Phone: ${order.phone}'),
-          Text('Ordered at: ${order.orderedAt}'),
+          Text('Đơn: ${order.orderId}'),
+          Text('Mã đặt phòng: ${order.bookingId}'),
+          Text('SĐT: ${order.phone}'),
+          Text('Thời gian đặt: ${order.orderedAt}'),
           const SizedBox(height: 8),
           if (order.services.isEmpty)
             const Text('No services in this order')
@@ -1084,11 +1269,11 @@ class _OrderInfoCard extends StatelessWidget {
 String _workflowTitle(_ServiceOrderWorkflowMode mode) {
   switch (mode) {
     case _ServiceOrderWorkflowMode.invoice:
-      return 'Export Invoice';
+      return 'Xuất hóa đơn';
     case _ServiceOrderWorkflowMode.requests:
-      return 'View Order Requests';
+      return 'Xem yêu cầu đơn dịch vụ';
     case _ServiceOrderWorkflowMode.process:
-      return 'Process Order';
+      return 'Xử lý đơn dịch vụ';
   }
 }
 
@@ -1129,15 +1314,15 @@ bool _matchesWorkflow(_ServiceOrderWorkflowMode mode, ServiceOrderModel order) {
 String _buildInvoiceText(ServiceOrderModel order) {
   final buffer = StringBuffer()
     ..writeln('FPT Golden Hotel')
-    ..writeln('SERVICE ORDER INVOICE')
-    ..writeln('Order: ${order.orderId}')
-    ..writeln('Booking: ${order.bookingId}')
-    ..writeln('Guest: ${order.guestName.isEmpty ? 'N/A' : order.guestName}')
-    ..writeln('Phone: ${order.phone.isEmpty ? 'N/A' : order.phone}')
-    ..writeln('Ordered at: ${order.orderedAt}')
-    ..writeln('Status: ${order.status}')
+    ..writeln('HÓA ĐƠN DỊCH VỤ')
+    ..writeln('Đơn: ${order.orderId}')
+    ..writeln('Mã đặt phòng: ${order.bookingId}')
+    ..writeln('Khách hàng: ${order.guestName.isEmpty ? 'Chưa có' : order.guestName}')
+    ..writeln('SĐT: ${order.phone.isEmpty ? 'Chưa có' : order.phone}')
+    ..writeln('Thời gian đặt: ${order.orderedAt}')
+    ..writeln('Trạng thái: ${_serviceOrderStatusLabel(order.status)}')
     ..writeln('')
-    ..writeln('Services:');
+    ..writeln('Dịch vụ:');
 
   if (order.services.isEmpty) {
     buffer.writeln('- No service lines');
@@ -1194,7 +1379,7 @@ class _ServiceOrderHeader extends StatelessWidget {
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
           ),
           const SizedBox(height: 12),
-          _Badge(label: '$totalOrders orders', color: Colors.orange),
+          _Badge(label: '$totalOrders đơn', color: Colors.orange),
         ],
       ),
     );
@@ -1241,11 +1426,11 @@ class _ServiceOrderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('Order: ${order.orderId}'),
-          Text('Booking: ${order.bookingId}'),
-          Text('Phone: ${order.phone}'),
-          Text('Ordered at: ${order.orderedAt}'),
-          Text('Total: ${_formatMoney(order.totalAmount)}'),
+          Text('Đơn: ${order.orderId}'),
+          Text('Mã đặt phòng: ${order.bookingId}'),
+          Text('SĐT: ${order.phone}'),
+          Text('Thời gian đặt: ${order.orderedAt}'),
+          Text('Tổng tiền: ${_formatMoney(order.totalAmount)}'),
           if (order.services.isNotEmpty) ...[
             const SizedBox(height: 8),
             ...order.services.map(
@@ -1370,7 +1555,7 @@ class _BookingCard extends StatelessWidget {
           Text(
             'Total payment: ${_formatMoney(_moneyValue(booking.totalAmount))}',
           ),
-          Text('Status: ${booking.status}'),
+          Text('Trạng thái: ${_bookingStatusText(booking.status)}'),
           const SizedBox(height: 12),
           Row(
             children: [

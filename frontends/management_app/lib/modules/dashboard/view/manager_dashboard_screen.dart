@@ -400,7 +400,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
               Text(
-                'Management',
+                'Quản lý',
                 style: TextStyle(fontSize: 10, color: Colors.white60),
               ),
             ],

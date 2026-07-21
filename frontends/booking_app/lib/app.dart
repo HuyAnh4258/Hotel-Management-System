@@ -13,7 +13,7 @@ class BookingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Booking App',
+      title: 'Ứng dụng đặt phòng',
       debugShowCheckedModeBanner: false,
       initialBinding: BindingsBuilder(() {
         Get.put(AuthViewModel(), permanent: true);
