@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 
-import 'package:hms_shared/auth/auth_service.dart';
 import '../viewmodel/booking_viewmodel.dart';
 
 class CancelRequestsPage extends StatefulWidget {
@@ -341,10 +339,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
   @override
   void initState() {
     super.initState();
-    _bookingsFuture = BookingApi.getBookings(
-      date: _formatDate(_selectedDate),
-      userId: Get.find<AuthService>().userId.value,
-    );
+    _bookingsFuture = BookingApi.getBookings(date: _formatDate(_selectedDate));
   }
 
   String _formatDate(DateTime value) {
@@ -357,7 +352,6 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
     setState(() {
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
-        userId: Get.find<AuthService>().userId.value,
       );
     });
   }
@@ -376,7 +370,6 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
       _selectedDate = picked;
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
-        userId: Get.find<AuthService>().userId.value,
       );
     });
   }
@@ -387,7 +380,6 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
     setState(() {
       _bookingsFuture = BookingApi.getBookings(
         date: _formatDate(_selectedDate),
-        userId: Get.find<AuthService>().userId.value,
       );
     });
   }
@@ -1450,51 +1442,6 @@ class _Badge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(color: color, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: scheme.primary),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: Colors.grey.shade700),
-          ),
-        ],
       ),
     );
   }

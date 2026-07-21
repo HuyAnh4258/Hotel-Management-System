@@ -329,16 +329,14 @@ class BookingSummary {
 
   bool canCheckIn(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckin.startsWith(today) &&
-        (normalizedStatus == 'PENDING' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'PENDING' ||
+        normalizedStatus == 'CONFIRMED' ||
+        normalizedStatus == 'CANCEL_REJECTED';
   }
 
   bool canCheckOut(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckout.startsWith(today) &&
-        (normalizedStatus == 'CHECKED_IN' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'CHECKED_IN';
   }
 
   bool get canRequestCancel {
