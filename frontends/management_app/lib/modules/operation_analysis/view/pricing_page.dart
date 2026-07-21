@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:management_app/core/theme/app_theme.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/property_management/viewmodel/property_viewmodel.dart';
 
 class PricingPage extends StatefulWidget {
   const PricingPage({super.key});
@@ -14,15 +15,19 @@ class PricingPage extends StatefulWidget {
 class _PricingPageState extends State<PricingPage> {
   final _invSearch = TextEditingController();
   final _svcSearch = TextEditingController();
+  final _rtSearch = TextEditingController();
   String _invSortBy = 'name';
   bool _invAsc = true;
   String _svcSortBy = 'name';
   bool _svcAsc = true;
+  String _rtSortBy = 'name';
+  bool _rtAsc = true;
 
   @override
   void dispose() {
     _invSearch.dispose();
     _svcSearch.dispose();
+    _rtSearch.dispose();
     super.dispose();
   }
 
@@ -30,23 +35,26 @@ class _PricingPageState extends State<PricingPage> {
   Widget build(BuildContext context) {
     final vm = Get.find<InventoryViewModel>();
     final svm = Get.find<ServiceViewModel>();
+    final rvm = Get.find<PropertyViewModel>();
     final isWide = MediaQuery.of(context).size.width > 800;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Đặt & Điều chỉnh giá')),
-      body: isWide ? _wide(vm, svm) : _narrow(vm, svm),
+      body: isWide ? _wide(vm, svm, rvm) : _narrow(vm, svm, rvm),
     );
   }
 
-  Widget _wide(InventoryViewModel i, ServiceViewModel s) => Row(
+  Widget _wide(InventoryViewModel i, ServiceViewModel s, PropertyViewModel r) => Row(
     children: [
       Expanded(child: _invCol(i)),
       Container(width: 1, color: AppColors.border),
       Expanded(child: _svcCol(s)),
+      Container(width: 1, color: AppColors.border),
+      Expanded(child: _rtCol(r)),
     ],
   );
-  Widget _narrow(InventoryViewModel i, ServiceViewModel s) => DefaultTabController(
-    length: 2,
+  Widget _narrow(InventoryViewModel i, ServiceViewModel s, PropertyViewModel r) => DefaultTabController(
+    length: 3,
     child: Column(
       children: [
         const TabBar(
@@ -55,9 +63,10 @@ class _PricingPageState extends State<PricingPage> {
           tabs: [
             Tab(text: 'Vật tư'),
             Tab(text: 'Dịch vụ'),
+            Tab(text: 'Hạng phòng'),
           ],
         ),
-        Expanded(child: TabBarView(children: [_invCol(i), _svcCol(s)])),
+        Expanded(child: TabBarView(children: [_invCol(i), _svcCol(s), _rtCol(r)])),
       ],
     ),
   );
@@ -201,6 +210,74 @@ class _PricingPageState extends State<PricingPage> {
     svc.isPriced ? 'Giá hiện tại: ${_fmt(svc.unitPrice!)}đ' : 'Chưa có giá bán',
     svc.isPriced ? _fmt(svc.unitPrice!) : '',
     (price) => svm.setPrice(svc.serviceId, price),
+  );
+
+  // ─── RT ──────────────────────────────────────
+  Widget _rtCol(PropertyViewModel rvm) {
+    return Obx(() {
+      var items = _rtSearch.text.isEmpty
+          ? List<RoomTypeModel>.from(rvm.roomTypes)
+          : rvm.roomTypes
+                .where(
+                  (s) => s.typeName.toLowerCase().contains(
+                    _rtSearch.text.toLowerCase(),
+                  ),
+                )
+                .toList();
+      int c(RoomTypeModel a, RoomTypeModel b) {
+        switch (_rtSortBy) {
+          case 'name':
+            return a.typeName.compareTo(b.typeName);
+          default:
+            return 0;
+        }
+      }
+
+      items.sort((a, b) => _rtAsc ? c(a, b) : c(b, a));
+      return Column(
+        children: [
+          _colHdr(
+            'Hạng phòng',
+            Icons.meeting_room_outlined,
+            AppColors.success,
+            items.length,
+            _rtSortBy,
+            _rtAsc,
+            () => setState(() {
+              _rtAsc = !_rtAsc;
+            }),
+            (v) => setState(() => _rtSortBy = v),
+          ),
+          _searchBar(_rtSearch, 'Tìm hạng phòng...', (_) => setState(() {}), () {
+            _rtSearch.clear();
+            setState(() {});
+          }),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+              itemCount: items.length,
+              itemBuilder: (_, i) => _rtRow(items[i], rvm),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _rtRow(RoomTypeModel rt, PropertyViewModel rvm) => _row(
+    rt.typeName,
+    'Sức chứa: ${rt.maxOccupancy} người',
+    rt.basePrice > 0,
+    rt.basePrice,
+    () => _rtDlg(rt, rvm),
+  );
+
+  void _rtDlg(RoomTypeModel rt, PropertyViewModel rvm) => _priceDlg(
+    rt.typeName,
+    Icons.meeting_room,
+    rt.basePrice > 0 ? 'Giá hiện tại: ${_fmt(rt.basePrice)}đ' : 'Chưa có giá cơ bản',
+    rt.basePrice > 0 ? _fmt(rt.basePrice) : '',
+    (price) => rvm.setRoomTypePrice(rt.roomTypeId, price),
   );
 
   // ─── Shared Widgets ───────────────────────────
