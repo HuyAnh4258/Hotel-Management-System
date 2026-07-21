@@ -157,9 +157,9 @@ class _BookingHomePageState extends State<BookingHomePage> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFFFB347),
-              Color(0xFFFFD6A5),
-              Color(0xFFFFF4E6),
+              Color(0xFFFFB86B),
+              Color(0xFFFFE6C7),
+              Color(0xFFF5FAFF),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -229,9 +229,16 @@ class _GuestHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white),
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,7 +268,7 @@ class _GuestHeader extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Chào mừng đến với Khách sạn FPT Goden, khách sạn 5 sao hàng đầu Việt Nam.',
+            'Chào mừng đến với Khách sạn FPT Golden.',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: const Color(0xFFB85C00),
@@ -270,7 +277,7 @@ class _GuestHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Không gian sang trọng, ấm áp với tông màu cam nổi bật, mang đến trải nghiệm đẳng cấp và thân thiện cho khách hàng.',
+            'Tìm phòng phù hợp, xem đánh giá và đặt phòng chỉ trong vài bước.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade700,
               height: 1.5,
@@ -302,7 +309,7 @@ class _GuestHeader extends StatelessWidget {
   }
 }
 
-class _SearchRoomTypeTab extends StatelessWidget {
+class _SearchRoomTypeTab extends StatefulWidget {
   const _SearchRoomTypeTab({
     required this.data,
     required this.fullName,
@@ -318,91 +325,410 @@ class _SearchRoomTypeTab extends StatelessWidget {
   final Future<void> Function() onRoomChanged;
 
   @override
+  State<_SearchRoomTypeTab> createState() => _SearchRoomTypeTabState();
+}
+
+class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
+  final TextEditingController _checkinController = TextEditingController();
+  final TextEditingController _checkoutController = TextEditingController();
+  final TextEditingController _guestController = TextEditingController(
+    text: '2',
+  );
+
+  DateTime? _checkinDate;
+  DateTime? _checkoutDate;
+  List<RoomModel>? _searchedRooms;
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _checkinController.dispose();
+    _checkoutController.dispose();
+    _guestController.dispose();
+    super.dispose();
+  }
+
+  String _formatDateForApi(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
+  }
+
+  String _formatDateForDisplay(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$day/$month/${value.year}';
+  }
+
+  Future<void> _pickDate({required bool isCheckin}) async {
+    final now = DateTime.now();
+    final initialDate = isCheckin
+        ? (_checkinDate ?? now)
+        : (_checkoutDate ?? _checkinDate ?? now.add(const Duration(days: 1)));
+    final firstDate = isCheckin ? now : (_checkinDate ?? now);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isBefore(firstDate) ? firstDate : initialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(now.year + 2),
+      helpText: isCheckin ? 'Select check-in date' : 'Select check-out date',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      if (isCheckin) {
+        _checkinDate = picked;
+        _checkinController.text = _formatDateForDisplay(picked);
+        if (_checkoutDate != null && !_checkoutDate!.isAfter(picked)) {
+          _checkoutDate = null;
+          _checkoutController.clear();
+        }
+      } else {
+        _checkoutDate = picked;
+        _checkoutController.text = _formatDateForDisplay(picked);
+      }
+    });
+  }
+
+  Future<void> _searchAvailableRooms() async {
+    final checkin = _checkinDate;
+    final checkout = _checkoutDate;
+    final guests = int.tryParse(_guestController.text.trim());
+
+    if (checkin == null || checkout == null || !checkout.isAfter(checkin)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn ngày nhận/trả phòng hợp lệ'),
+        ),
+      );
+      return;
+    }
+    if (guests == null || guests <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Số khách phải lớn hơn 0')));
+      return;
+    }
+
+    setState(() {
+      _searching = true;
+    });
+
+    try {
+      final rooms = await BookingApi.getAvailableRooms(
+        checkin: _formatDateForApi(checkin),
+        checkout: _formatDateForApi(checkout),
+      );
+      if (!mounted) return;
+      setState(() {
+        _searchedRooms = rooms;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không tìm được phòng: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _searching = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final normalizedQuery = query.trim().toLowerCase();
-    final roomTypes = data.roomTypes.where((roomType) {
-      if (normalizedQuery.isEmpty) return true;
-      return roomType.name.toLowerCase().contains(normalizedQuery) ||
-          roomType.description.toLowerCase().contains(normalizedQuery);
-    }).toList();
+    final normalizedQuery = widget.query.trim().toLowerCase();
+    final availableRooms = _searchedRooms ?? widget.data.rooms;
+    final roomTypes = widget.data.roomTypes
+        .where((roomType) {
+          if (normalizedQuery.isEmpty) return true;
+          return roomType.name.toLowerCase().contains(normalizedQuery) ||
+              roomType.description.toLowerCase().contains(normalizedQuery);
+        })
+        .where((roomType) {
+          if (_searchedRooms == null) return true;
+          return availableRooms.any(
+            (room) => room.roomTypeId == roomType.roomTypeId,
+          );
+        })
+        .toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
       children: [
-        _GuestHeader(data: data, fullName: fullName),
+        _GuestHeader(data: widget.data, fullName: widget.fullName),
         const SizedBox(height: 18),
-        _TaskSectionCard(
-          title: 'Search by room type',
-          subtitle:
-              'Find a room type, check reviews, then choose a room to book.',
-          icon: Icons.search_rounded,
-          child: TextField(
-            onChanged: onQueryChanged,
-            decoration: const InputDecoration(
-              labelText: 'Room type',
-              hintText: 'Suite, Deluxe, Superior...',
-              prefixIcon: Icon(Icons.search_rounded),
-            ),
+        _BookingPanel(
+          icon: Icons.travel_explore_rounded,
+          title: 'Tìm phòng phù hợp',
+          subtitle: 'Chọn ngày lưu trú và số khách để xem phòng còn trống.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _checkinController,
+                readOnly: true,
+                onTap: () => _pickDate(isCheckin: true),
+                decoration: const InputDecoration(
+                  labelText: 'Ngày nhận phòng',
+                  hintText: 'Chọn ngày nhận phòng',
+                  suffixIcon: Icon(Icons.calendar_month_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _checkoutController,
+                readOnly: true,
+                onTap: () => _pickDate(isCheckin: false),
+                decoration: const InputDecoration(
+                  labelText: 'Ngày trả phòng',
+                  hintText: 'Chọn ngày trả phòng',
+                  suffixIcon: Icon(Icons.event_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _guestController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Số khách',
+                  prefixIcon: Icon(Icons.group_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: widget.onQueryChanged,
+                decoration: const InputDecoration(
+                  labelText: 'Loại phòng',
+                  hintText: 'Suite, Deluxe, Superior...',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _searching ? null : _searchAvailableRooms,
+                  icon: _searching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_rounded),
+                  label: const Text('Tìm phòng'),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 18),
-        Text(
-          'Room Types',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        if (roomTypes.isEmpty)
-          const Text('No room type matches your search')
-        else
-          ...roomTypes.map(
-            (roomType) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: RoomTypeCard(
-                title: roomType.name,
-                subtitle:
-                    '${roomType.description}\nPrice from ${roomType.basePrice.toStringAsFixed(0)}',
-                imagePath: roomType.imagePath,
-                onTap: () async {
-                  if (!context.mounted) return;
+        _BookingPanel(
+          icon: Icons.king_bed_rounded,
+          title: 'Loại phòng còn trống',
+          subtitle: _searchedRooms == null
+              ? 'Danh sách loại phòng hiện có trong khách sạn.'
+              : 'Kết quả phù hợp với ngày lưu trú vừa chọn.',
+          trailing: _searchedRooms != null
+              ? _Badge(
+                  label: '${availableRooms.length} phòng',
+                  color: Colors.blueGrey,
+                )
+              : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (roomTypes.isEmpty)
+                const _EmptyHint(
+                  icon: Icons.search_off_rounded,
+                  title: 'Không tìm thấy loại phòng phù hợp',
+                  message: 'Hãy thử đổi ngày lưu trú hoặc từ khóa loại phòng.',
+                )
+              else
+                ...roomTypes.map((roomType) {
+                  final roomsForType = availableRooms
+                      .where((room) => room.roomTypeId == roomType.roomTypeId)
+                      .toList();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: RoomTypeCard(
+                      title: roomType.name,
+                      subtitle: roomType.description,
+                      imagePath: roomType.imagePath,
+                      priceLabel: '${_formatMoney(roomType.basePrice)} / đêm',
+                      availableCount: roomsForType.length,
+                      onTap: () async {
+                        if (!context.mounted) return;
 
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => RoomTypeDetailPage(
-                        roomType: roomType,
-                        availableRooms: data.rooms
-                            .where(
-                              (room) => room.roomTypeId == roomType.roomTypeId,
-                            )
-                            .toList(),
-                        onViewFeedback: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const FeedbackListPage(),
+                        final changed = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => RoomTypeDetailPage(
+                              roomType: roomType,
+                              availableRooms: roomsForType,
+                              initialCheckin: _checkinDate,
+                              initialCheckout: _checkoutDate,
+                              initialGuestCount: int.tryParse(
+                                _guestController.text.trim(),
+                              ),
+                              onViewFeedback: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const FeedbackListPage(),
+                                  ),
+                                );
+                              },
+                              onSubmitFeedback: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SubmitFeedbackPage(),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                        onSubmitFeedback: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SubmitFeedbackPage(),
-                            ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+
+                        if (changed == true || changed == null) {
+                          await widget.onRoomChanged();
+                        }
+                      },
                     ),
                   );
-
-                  if (changed == true || changed == null) {
-                    await onRoomChanged();
-                  }
-                },
-              ),
-            ),
+                }),
+            ],
           ),
+        ),
       ],
+    );
+  }
+}
+
+class _BookingPanel extends StatelessWidget {
+  const _BookingPanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.grey.shade500),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade700),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -415,6 +741,55 @@ class _BookingManagementTab extends StatelessWidget {
 
   final Future<List<BookingSummary>> bookingsFuture;
   final Future<void> Function() onRefresh;
+
+  Future<void> _requestCancel(
+    BuildContext context,
+    BookingSummary booking,
+  ) async {
+    final formData = await showDialog<_CancellationFormData>(
+      context: context,
+      builder: (context) => _BookingCancellationDialog(booking: booking),
+    );
+
+    if (formData == null) return;
+
+    try {
+      await BookingApi.requestCancelBooking(booking.bookingId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã gửi yêu cầu hủy booking ${booking.bookingId}. Lý do: ${formData.reason}',
+          ),
+        ),
+      );
+      await onRefresh();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $e')));
+    }
+  }
+
+  Future<void> _cancelCancelRequest(
+    BuildContext context,
+    BookingSummary booking,
+  ) async {
+    try {
+      await BookingApi.cancelCancelRequest(booking.bookingId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã giữ lại booking ${booking.bookingId}')),
+      );
+      await onRefresh();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Hủy yêu cầu hủy thất bại: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -494,7 +869,17 @@ class _BookingManagementTab extends StatelessWidget {
               ...activeBookings.map(
                 (booking) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _CompactBookingCard(booking: booking),
+                  child: _CompactBookingCard(
+                    booking: booking,
+                    onRequestCancel:
+                        booking.canRequestCancel &&
+                            !booking.hasReachedCheckinDeadline
+                        ? () => _requestCancel(context, booking)
+                        : null,
+                    onCancelCancelRequest: booking.canCancelCancelRequest
+                        ? () => _cancelCancelRequest(context, booking)
+                        : null,
+                  ),
                 ),
               ),
           ],
@@ -548,15 +933,136 @@ class _BookingHistoryTab extends StatelessWidget {
             if (bookings.isEmpty)
               const Text('No booking history yet')
             else
-              ...bookings.map(
-                (booking) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _CompactBookingCard(booking: booking),
-                ),
-              ),
+              _BookingHistoryTable(bookings: bookings),
           ],
         );
       },
+    );
+  }
+}
+
+class _BookingHistoryTable extends StatelessWidget {
+  const _BookingHistoryTable({required this.bookings});
+
+  final List<BookingSummary> bookings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: bookings
+          .map(
+            (booking) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _HistoryBookingCard(booking: booking),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _HistoryBookingCard extends StatelessWidget {
+  const _HistoryBookingCard({required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.055),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.receipt_long_rounded, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  booking.bookingId,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _Badge(label: booking.status, color: Colors.orange),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _BookingInfoLine(
+            icon: Icons.calendar_month_rounded,
+            label: 'Lưu trú',
+            value: '${booking.expectedCheckin} - ${booking.expectedCheckout}',
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.meeting_room_rounded,
+            label: 'Phòng',
+            value: booking.rooms.isEmpty
+                ? 'Chưa có thông tin'
+                : booking.rooms.join(', '),
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.payments_rounded,
+            label: 'Tổng tiền',
+            value: _formatMoney(_moneyValue(booking.totalAmount)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingInfoLine extends StatelessWidget {
+  const _BookingInfoLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
     );
   }
 }
@@ -674,9 +1180,15 @@ class _TaskSectionCard extends StatelessWidget {
 }
 
 class _CompactBookingCard extends StatelessWidget {
-  const _CompactBookingCard({required this.booking});
+  const _CompactBookingCard({
+    required this.booking,
+    this.onRequestCancel,
+    this.onCancelCancelRequest,
+  });
 
   final BookingSummary booking;
+  final VoidCallback? onRequestCancel;
+  final VoidCallback? onCancelCancelRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -712,10 +1224,170 @@ class _CompactBookingCard extends StatelessWidget {
           Text('Checkin: ${booking.expectedCheckin}'),
           Text('Checkout: ${booking.expectedCheckout}'),
           Text('Total: ${_formatMoney(_moneyValue(booking.totalAmount))}'),
+          if (onRequestCancel != null || onCancelCancelRequest != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: booking.canCancelCancelRequest
+                  ? OutlinedButton.icon(
+                      onPressed: onCancelCancelRequest,
+                      icon: const Icon(Icons.undo_rounded),
+                      label: const Text('Keep Reservation'),
+                    )
+                  : FilledButton.icon(
+                      onPressed: onRequestCancel,
+                      icon: const Icon(Icons.cancel_schedule_send_rounded),
+                      label: const Text('Cancel Booking'),
+                    ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _BookingCancellationDialog extends StatefulWidget {
+  const _BookingCancellationDialog({required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  State<_BookingCancellationDialog> createState() =>
+      _BookingCancellationDialogState();
+}
+
+class _BookingCancellationDialogState
+    extends State<_BookingCancellationDialog> {
+  static const _reasons = [
+    'Change of travel plan',
+    'Booked wrong date',
+    'Found another room',
+    'Personal reason',
+    'Other',
+  ];
+
+  final TextEditingController _notesController = TextEditingController();
+  String? _selectedReason;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final reason = _selectedReason;
+    if (reason == null || reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a cancellation reason')),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _CancellationFormData(
+        reason: reason,
+        notes: _notesController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final booking = widget.booking;
+
+    return AlertDialog(
+      title: const Text('Request Booking Cancellation'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Reservation Details',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Booking ID: ${booking.bookingId}'),
+                  Text(
+                    'Stay: ${booking.expectedCheckin} - ${booking.expectedCheckout}',
+                  ),
+                  Text(
+                    booking.rooms.isEmpty
+                        ? 'Room: Not available'
+                        : 'Room: ${booking.rooms.join(", ")}',
+                  ),
+                  Text(
+                    'Total: ${_formatMoney(_moneyValue(booking.totalAmount))}',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedReason,
+              decoration: const InputDecoration(
+                labelText: 'Reason for Cancellation (*)',
+                border: OutlineInputBorder(),
+              ),
+              items: _reasons
+                  .map(
+                    (reason) =>
+                        DropdownMenuItem(value: reason, child: Text(reason)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedReason = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 250,
+              decoration: const InputDecoration(
+                labelText: 'Additional Notes',
+                hintText: 'Optional: Provide details...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Keep Reservation'),
+        ),
+        FilledButton(
+          onPressed: _confirm,
+          child: const Text('Confirm Cancellation'),
+        ),
+      ],
+    );
+  }
+}
+
+class _CancellationFormData {
+  const _CancellationFormData({required this.reason, required this.notes});
+
+  final String reason;
+  final String notes;
 }
 
 class _ProfileRow extends StatelessWidget {
@@ -935,6 +1607,14 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                       ),
                     ),
                   ),
+                if (data.services.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _ServiceOrderSummaryCard(
+                    services: data.services,
+                    quantities: _quantities,
+                    total: _total(data.services),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 FilledButton.icon(
                   onPressed: _submitting || activeBookings.isEmpty
@@ -947,12 +1627,83 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.check_circle_rounded),
-                  label: const Text('Make Order'),
+                  label: const Text('[ PLACE ORDER ]'),
                 ),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ServiceOrderSummaryCard extends StatelessWidget {
+  const _ServiceOrderSummaryCard({
+    required this.services,
+    required this.quantities,
+    required this.total,
+  });
+
+  final List<HotelServiceModel> services;
+  final Map<String, int> quantities;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedServices = services
+        .where((service) => (quantities[service.serviceId] ?? 0) > 0)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFF94A3B8)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ORDER SUMMARY',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const Divider(height: 22),
+          if (selectedServices.isEmpty)
+            const Text('No service items selected')
+          else
+            ...selectedServices.map((service) {
+              final quantity = quantities[service.serviceId] ?? 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('${service.serviceName} x $quantity')),
+                    Text(_formatMoney(service.price * quantity)),
+                  ],
+                ),
+              );
+            }),
+          const Divider(height: 22),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'TOTAL COST:',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                _formatMoney(total),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1539,7 +2290,10 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                 );
               }
 
-              final bookings = snapshot.data ?? [];
+              final bookings = (snapshot.data ?? []).where((booking) {
+                final status = booking.status.toUpperCase();
+                return status == 'CHECKED_OUT' || status == 'COMPLETED';
+              }).toList();
               final selectedExists = bookings.any(
                 (booking) => booking.bookingId == _selectedBookingId,
               );
@@ -1550,29 +2304,37 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                 children: [
                   const _SubmitFeedbackHeader(),
                   const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedExists ? _selectedBookingId : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Booking',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: bookings
-                        .map(
-                          (booking) => DropdownMenuItem(
-                            value: booking.bookingId,
-                            child: Text(
-                              '${booking.bookingId} - ${booking.guestName}',
-                              overflow: TextOverflow.ellipsis,
+                  if (bookings.isEmpty)
+                    const _EmptyHint(
+                      icon: Icons.rate_review_outlined,
+                      title: 'No completed booking yet',
+                      message:
+                          'You can submit feedback after your stay is checked out.',
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedExists ? _selectedBookingId : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Completed Booking',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: bookings
+                          .map(
+                            (booking) => DropdownMenuItem(
+                              value: booking.bookingId,
+                              child: Text(
+                                '${booking.bookingId} - ${booking.guestName}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedBookingId = value;
-                      });
-                    },
-                  ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBookingId = value;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 16),
                   _RatingSelector(
                     rating: _rating,
@@ -1594,7 +2356,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                   ),
                   const SizedBox(height: 18),
                   FilledButton.icon(
-                    onPressed: _submitting ? null : _submit,
+                    onPressed: _submitting || bookings.isEmpty ? null : _submit,
                     icon: _submitting
                         ? const SizedBox(
                             width: 18,
@@ -2929,7 +3691,7 @@ class _BookingCard extends StatelessWidget {
           Text('Checkin: ${booking.expectedCheckin}'),
           Text('Checkout: ${booking.expectedCheckout}'),
           Text(
-            'Total payment: ${_formatMoney(_moneyValue(booking.totalAmount))}',
+            'Total amount: ${_formatMoney(_moneyValue(booking.totalAmount))}',
           ),
           Text('Status: ${booking.status}'),
           const SizedBox(height: 12),

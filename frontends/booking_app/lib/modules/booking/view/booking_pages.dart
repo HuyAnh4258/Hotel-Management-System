@@ -11,12 +11,18 @@ class RoomTypeDetailPage extends StatelessWidget {
     required this.availableRooms,
     this.onViewFeedback,
     this.onSubmitFeedback,
+    this.initialCheckin,
+    this.initialCheckout,
+    this.initialGuestCount,
   });
 
   final RoomTypeModel roomType;
   final List<RoomModel> availableRooms;
   final VoidCallback? onViewFeedback;
   final VoidCallback? onSubmitFeedback;
+  final DateTime? initialCheckin;
+  final DateTime? initialCheckout;
+  final int? initialGuestCount;
 
   String _formatPrice(double price) => price.toStringAsFixed(0);
 
@@ -272,6 +278,9 @@ class RoomTypeDetailPage extends StatelessWidget {
                           builder: (_) => BookingFormPage(
                             roomType: roomType,
                             availableRooms: availableRooms,
+                            initialCheckin: initialCheckin,
+                            initialCheckout: initialCheckout,
+                            initialGuestCount: initialGuestCount,
                           ),
                         ),
                       );
@@ -390,6 +399,7 @@ class BookingFormPage extends StatefulWidget {
     this.initialPhone,
     this.initialEmail,
     this.initialSelectedRoomId,
+    this.initialGuestCount,
     this.changeBookingId,
     this.onBookingChanged,
     this.dialogMode = false,
@@ -405,6 +415,7 @@ class BookingFormPage extends StatefulWidget {
   final String? initialPhone;
   final String? initialEmail;
   final String? initialSelectedRoomId;
+  final int? initialGuestCount;
   final String? changeBookingId;
   final ValueChanged<BookingSummary>? onBookingChanged;
   final bool dialogMode;
@@ -420,6 +431,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
   final _emailController = TextEditingController();
   final _checkinController = TextEditingController();
   final _checkoutController = TextEditingController();
+  final _guestCountController = TextEditingController();
 
   RoomModel? _selectedRoom;
   DateTime? _checkinDate;
@@ -450,6 +462,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
         widget.initialPhone ?? booking?.phone ?? currentUser?.phone ?? '';
     _emailController.text =
         widget.initialEmail ?? booking?.email ?? currentUser?.email ?? '';
+    _guestCountController.text = (widget.initialGuestCount ?? 1).toString();
 
     final parsedCheckin =
         widget.initialCheckin ??
@@ -498,6 +511,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
     _emailController.dispose();
     _checkinController.dispose();
     _checkoutController.dispose();
+    _guestCountController.dispose();
     super.dispose();
   }
 
@@ -708,7 +722,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
           content: Text(
             widget.changeBookingId != null
                 ? 'Đổi phòng thành công'
-                : 'Đặt phòng thành công',
+                : 'Đặt phòng thành công, trạng thái PENDING',
           ),
         ),
       );
@@ -745,7 +759,7 @@ class _BookingFormPageState extends State<BookingFormPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Booking form'),
+        title: const Text('Đặt phòng'),
         backgroundColor: Colors.transparent,
       ),
       body: Container(
@@ -766,9 +780,16 @@ class _BookingFormPageState extends State<BookingFormPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white),
+                color: Colors.white.withValues(alpha: 0.98),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,6 +888,23 @@ class _BookingFormPageState extends State<BookingFormPage> {
                         ? 'Chọn ngày trả phòng'
                         : null,
                   ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _guestCountController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Số khách',
+                      prefixIcon: Icon(Icons.group_rounded),
+                    ),
+                    validator: (value) {
+                      final guests = int.tryParse(value?.trim() ?? '');
+                      if (guests == null || guests <= 0) {
+                        return 'Nhập số khách hợp lệ';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 18),
                   _RoomSelectionList(
                     rooms: _availableRooms,
@@ -888,24 +926,39 @@ class _BookingFormPageState extends State<BookingFormPage> {
                         : null,
                   ),
                   const SizedBox(height: 16),
-                  _PaymentSummaryCard(
+                  _BookingCostSummaryCard(
                     nights: _calculateNights(),
                     dailyRate: _dailyRate(),
                     totalAmount: _calculateTotalAmount() ?? 0,
+                    guestCount:
+                        int.tryParse(_guestCountController.text.trim()) ?? 0,
                   ),
                   const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: Text(
-                        _submitting
-                            ? 'Đang gửi...'
-                            : widget.changeBookingId != null
-                            ? 'Xác nhận'
-                            : 'Xác nhận đặt phòng',
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _submitting
+                              ? null
+                              : () => Navigator.of(context).pop(false),
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          label: const Text('Cancel & Back'),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _submitting ? null : _submit,
+                          child: Text(
+                            _submitting
+                                ? 'Đang gửi...'
+                                : widget.changeBookingId != null
+                                ? 'Xác nhận'
+                                : 'Xác nhận đặt phòng',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -917,39 +970,52 @@ class _BookingFormPageState extends State<BookingFormPage> {
   }
 }
 
-class _PaymentSummaryCard extends StatelessWidget {
-  const _PaymentSummaryCard({
+class _BookingCostSummaryCard extends StatelessWidget {
+  const _BookingCostSummaryCard({
     required this.nights,
     required this.dailyRate,
     required this.totalAmount,
+    required this.guestCount,
   });
 
   final int? nights;
   final double dailyRate;
   final double totalAmount;
+  final int guestCount;
 
   String _formatMoney(double value) => value.toStringAsFixed(0);
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.12)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.055),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tạm tính trước thanh toán',
+            'Tóm tắt đặt phòng',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          _SummaryLine(label: 'Số khách', value: '$guestCount khách'),
+          _SummaryLine(
+            label: 'Giá mỗi đêm',
+            value: '${_formatMoney(dailyRate)} VND',
           ),
           const SizedBox(height: 8),
           Text(
@@ -970,6 +1036,30 @@ class _PaymentSummaryCard extends StatelessWidget {
               ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.end,
+          ),
         ],
       ),
     );
