@@ -226,6 +226,21 @@ class BookingApi {
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+
+  static String errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      if (data is String && data.isNotEmpty) {
+        return data;
+      }
+      return error.message ?? 'Request failed';
+    }
+
+    return error.toString();
+  }
 }
 
 class CreateBookingPayload {
@@ -339,7 +354,7 @@ class BookingSummary {
 
   bool get canRequestCancel {
     final normalizedStatus = status.toUpperCase();
-    return normalizedStatus == 'PENDING' || normalizedStatus == 'CHECKED_IN';
+    return normalizedStatus == 'PENDING';
   }
 
   bool get hasReachedCheckinDeadline {

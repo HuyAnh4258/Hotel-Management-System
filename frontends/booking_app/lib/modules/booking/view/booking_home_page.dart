@@ -776,9 +776,10 @@ class _BookingManagementTab extends StatelessWidget {
       await onRefresh();
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $e')));
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
     }
   }
 
@@ -841,9 +842,7 @@ class _BookingManagementTab extends StatelessWidget {
                   child: _CompactBookingCard(
                     booking: booking,
                     onViewDetails: () => _openBookingDetail(context, booking),
-                    onCancel:
-                        booking.canRequestCancel &&
-                            !booking.hasReachedCheckinDeadline
+                    onCancel: booking.canRequestCancel
                         ? () => _requestCancelBooking(context, booking)
                         : null,
                   ),
@@ -1477,9 +1476,10 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $e')));
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
     }
   }
 
@@ -1608,9 +1608,7 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
               children: [
                 _BookingDetailCard(
                   booking: _booking,
-                  onRequestCancel:
-                      _booking.canRequestCancel &&
-                          !_booking.hasReachedCheckinDeadline
+                  onRequestCancel: _booking.canRequestCancel
                       ? _requestCancelBooking
                       : null,
                   onCancelCancelRequest: _booking.canCancelCancelRequest
@@ -3121,9 +3119,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       await _reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $e')));
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
     }
   }
 
@@ -3284,9 +3283,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _OrderHistoryCard(
                           booking: booking,
-                          onRequestCancel:
-                              booking.canRequestCancel &&
-                                  !booking.hasReachedCheckinDeadline
+                          onRequestCancel: booking.canRequestCancel
                               ? () => _requestCancel(booking)
                               : null,
                           onCancelCancelRequest: booking.canCancelCancelRequest
@@ -3366,9 +3363,6 @@ class _OrderHistoryCard extends StatelessWidget {
     if (booking.isWaitingCancelApproval) return 'Đợi lễ tân duyệt hủy';
     if (booking.isCancelled) return 'Đơn hàng đã hủy';
     if (booking.isCancelRejected) return 'Yêu cầu hủy đã từ chối';
-    if (booking.canRequestCancel && booking.hasReachedCheckinDeadline) {
-      return 'Đã đến hạn check-in, không thể hủy đơn hàng';
-    }
     return booking.status;
   }
 
@@ -3389,11 +3383,6 @@ class _OrderHistoryCard extends StatelessWidget {
     final actionIcon = booking.isWaitingCancelApproval
         ? Icons.undo_rounded
         : Icons.cancel_schedule_send_rounded;
-    final disableCancel =
-        !booking.isWaitingCancelApproval &&
-        booking.canRequestCancel &&
-        booking.hasReachedCheckinDeadline;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -3427,22 +3416,7 @@ class _OrderHistoryCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: disableCancel
-                  ? null
-                  : () {
-                      if (booking.hasReachedCheckinDeadline &&
-                          !booking.isWaitingCancelApproval) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Đã đến hạn check-in, không thể hủy đơn hàng',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      actionCallback?.call();
-                    },
+              onPressed: actionCallback,
               icon: Icon(actionIcon),
               label: Text(actionLabel),
             ),
