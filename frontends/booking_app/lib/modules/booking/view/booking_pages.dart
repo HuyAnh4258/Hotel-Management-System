@@ -29,6 +29,7 @@ class RoomTypeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final galleryImages = _roomGalleryImages(roomType, availableRooms);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -72,17 +73,9 @@ class RoomTypeDetailPage extends StatelessWidget {
                     children: [
                       AspectRatio(
                         aspectRatio: 16 / 9,
-                        child: Image.asset(
-                          roomType.imagePath,
+                        child: _RoomImage(
+                          source: roomType.imagePath,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            color: scheme.primary.withValues(alpha: 0.10),
-                            child: Icon(
-                              Icons.hotel_rounded,
-                              size: 56,
-                              color: scheme.primary,
-                            ),
-                          ),
                         ),
                       ),
                       Positioned(
@@ -178,6 +171,10 @@ class RoomTypeDetailPage extends StatelessWidget {
                           label: 'Mô tả',
                           value: roomType.description,
                         ),
+                        if (galleryImages.length > 1) ...[
+                          const SizedBox(height: 16),
+                          _RoomPhotoGallery(images: galleryImages),
+                        ],
                       ],
                     ),
                   ),
@@ -295,6 +292,117 @@ class RoomTypeDetailPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+List<String> _roomGalleryImages(
+  RoomTypeModel roomType,
+  List<RoomModel> availableRooms,
+) {
+  final images = <String>[];
+  final seen = <String>{};
+
+  void addImage(String? source) {
+    final normalized = source?.trim();
+    if (normalized == null || normalized.isEmpty || seen.contains(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    images.add(normalized);
+  }
+
+  addImage(roomType.imagePath);
+  for (final room in availableRooms) {
+    addImage(room.imagePath);
+  }
+
+  const fallbackImages = [
+    'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=900&q=80',
+    'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=900&q=80',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80',
+  ];
+  for (final image in fallbackImages) {
+    if (images.length >= 3) break;
+    addImage(image);
+  }
+
+  return images;
+}
+
+class _RoomPhotoGallery extends StatelessWidget {
+  const _RoomPhotoGallery({required this.images});
+
+  final List<String> images;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hình ảnh phòng',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: images.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 136,
+                  height: 92,
+                  child: _RoomImage(source: images[index], fit: BoxFit.cover),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RoomImage extends StatelessWidget {
+  const _RoomImage({required this.source, required this.fit});
+
+  final String source;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final normalized = source.trim();
+    final placeholder = Container(
+      color: scheme.primary.withValues(alpha: 0.10),
+      child: Icon(Icons.hotel_rounded, size: 56, color: scheme.primary),
+    );
+
+    if (normalized.isEmpty) {
+      return placeholder;
+    }
+
+    final isNetwork =
+        normalized.startsWith('http://') || normalized.startsWith('https://');
+    if (isNetwork) {
+      return Image.network(
+        normalized,
+        fit: fit,
+        errorBuilder: (_, _, _) => placeholder,
+      );
+    }
+
+    return Image.asset(
+      normalized,
+      fit: fit,
+      errorBuilder: (_, _, _) => placeholder,
     );
   }
 }

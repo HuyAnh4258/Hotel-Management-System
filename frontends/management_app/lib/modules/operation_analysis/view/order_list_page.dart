@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hms_shared/auth/auth_service.dart';
 import 'package:intl/intl.dart';
 import '../viewmodel/order_viewmodel.dart';
 
@@ -15,7 +16,12 @@ class _OrderListPageState extends State<OrderListPage>
   late TabController _tabController;
   final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
-  final List<String> _tabs = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+  final List<String> _tabs = [
+    'APPROVED',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'CANCELLED',
+  ];
 
   @override
   void initState() {
@@ -31,6 +37,8 @@ class _OrderListPageState extends State<OrderListPage>
 
   String _getTabLabel(String status) {
     switch (status) {
+      case 'APPROVED':
+        return 'Đã duyệt';
       case 'PENDING':
         return 'Chờ xử lý';
       case 'IN_PROGRESS':
@@ -47,11 +55,14 @@ class _OrderListPageState extends State<OrderListPage>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final auth = Get.find<AuthService>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quản lý đơn dịch vụ',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Quản lý đơn dịch vụ',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -59,6 +70,11 @@ class _OrderListPageState extends State<OrderListPage>
             icon: const Icon(Icons.person_outline_rounded),
             tooltip: 'Hồ sơ cá nhân',
             onPressed: () => Get.toNamed('/profile'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Đăng xuất',
+            onPressed: () => _confirmLogout(context, auth),
           ),
         ],
         bottom: TabBar(
@@ -74,8 +90,35 @@ class _OrderListPageState extends State<OrderListPage>
         color: Colors.grey.shade50,
         child: TabBarView(
           controller: _tabController,
-          children: _tabs.map((status) => _OrderListTab(status: status)).toList(),
+          children: _tabs
+              .map((status) => _OrderListTab(status: status))
+              .toList(),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context, AuthService auth) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xác nhận đăng xuất'),
+        content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await auth.logout();
+              Get.offAllNamed('/login');
+            },
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Đăng xuất'),
+          ),
+        ],
       ),
     );
   }
@@ -111,8 +154,9 @@ class _OrderListTabState extends State<_OrderListTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Cập nhật trạng thái thành công'),
-            backgroundColor: Colors.green),
+          content: Text('Cập nhật trạng thái thành công'),
+          backgroundColor: Colors.green,
+        ),
       );
       _loadOrders();
     } catch (e) {
@@ -135,13 +179,14 @@ class _OrderListTabState extends State<_OrderListTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Cập nhật trạng thái',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Cập nhật trạng thái',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 20),
-              if (order.status == 'PENDING') ...[
+              if (order.status == 'APPROVED') ...[
                 ListTile(
                   leading: const Icon(Icons.play_arrow, color: Colors.blue),
                   title: const Text('Bắt đầu xử lý'),
@@ -202,8 +247,10 @@ class _OrderListTabState extends State<_OrderListTab> {
                 Padding(
                   padding: EdgeInsets.only(top: 100),
                   child: Center(
-                    child: Text('Không có đơn nào trong trạng thái này',
-                        style: TextStyle(color: Colors.grey, fontSize: 16)),
+                    child: Text(
+                      'Không có đơn nào trong trạng thái này',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
                   ),
                 ),
               ],
@@ -232,14 +279,22 @@ class _OrderListTabState extends State<_OrderListTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(order.orderId,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(
+                              order.orderId,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                                color: _getStatusColor(
+                                  order.status,
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -256,32 +311,52 @@ class _OrderListTabState extends State<_OrderListTab> {
                         const Divider(height: 24),
                         Row(
                           children: [
-                            const Icon(Icons.person, size: 20, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text('Khách hàng: ${order.guestName}',
-                                style: const TextStyle(fontSize: 15)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.payments, size: 20, color: Colors.grey),
+                            const Icon(
+                              Icons.person,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 8),
                             Text(
-                              'Tổng tiền: ${currencyFormat.format(order.totalAmount)}',
-                              style: const TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w600),
+                              'Khách hàng: ${order.guestName}',
+                              style: const TextStyle(fontSize: 15),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.access_time, size: 20, color: Colors.grey),
+                            const Icon(
+                              Icons.payments,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Thời gian: ${_formatDate(order.orderedAt)}',
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.grey.shade700)),
+                            Text(
+                              'Tổng tiền: ${currencyFormat.format(order.totalAmount)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Thời gian: ${_formatDate(order.orderedAt)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -298,8 +373,8 @@ class _OrderListTabState extends State<_OrderListTab> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'PENDING':
-        return Colors.orange;
+      case 'APPROVED':
+        return Colors.teal;
       case 'IN_PROGRESS':
         return Colors.blue;
       case 'COMPLETED':
