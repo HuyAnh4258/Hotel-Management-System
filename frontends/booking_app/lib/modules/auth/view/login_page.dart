@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'forgot_password_page.dart';
 import 'register_page.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
@@ -278,6 +279,20 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Get.to(() => const ForgotPasswordPage()),
+                child: const Text(
+                  'Quên mật khẩu?',
+                  style: TextStyle(
+                    color: Color(0xFF0F2557),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             Center(
               child: Column(
                 children: [

@@ -48,6 +48,31 @@ class AuthApi {
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+
+  static Future<void> requestForgotPasswordOtp({required String email}) async {
+    await _dio.post('/forgot-password/request', data: {'email': email});
+  }
+
+  static Future<void> verifyForgotPasswordOtp({
+    required String email,
+    required String otp,
+  }) async {
+    await _dio.post(
+      '/forgot-password/verify',
+      data: {'email': email, 'otp': otp},
+    );
+  }
+
+  static Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _dio.post(
+      '/forgot-password/reset',
+      data: {'email': email, 'otp': otp, 'newPassword': newPassword},
+    );
+  }
 }
 
 class AuthResponse {
@@ -88,4 +113,3 @@ class AuthResponse {
     );
   }
 }
-

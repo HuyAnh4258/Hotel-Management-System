@@ -81,11 +81,64 @@ class AuthViewModel extends GetxController {
     }
   }
 
+  Future<bool> requestForgotPasswordOtp(String email) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await AuthApi.requestForgotPasswordOtp(email: email);
+      return true;
+    } catch (e) {
+      errorMessage.value = _normalizeError(e);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> verifyForgotPasswordOtp(String email, String otp) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await AuthApi.verifyForgotPasswordOtp(email: email, otp: otp);
+      return true;
+    } catch (e) {
+      errorMessage.value = _normalizeError(e);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await AuthApi.resetPassword(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      return true;
+    } catch (e) {
+      errorMessage.value = _normalizeError(e);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   String _normalizeError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map && data['message'] != null) {
         return data['message'].toString();
+      }
+      if (data is String && data.isNotEmpty) {
+        return data;
       }
       return error.response?.statusMessage ?? 'Đăng nhập thất bại';
     }
