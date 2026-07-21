@@ -228,6 +228,10 @@ public class ServiceOrderService {
         ServiceOrderSummary currentOrder = getOrder(orderId);
         validateStatusTransition(currentOrder.status(), normalizedStatus);
 
+        if ("COMPLETED".equals(normalizedStatus) && !"COMPLETED".equals(currentOrder.status() == null ? "" : currentOrder.status().trim().toUpperCase())) {
+            deductInventoryForOrder(orderId);
+        }
+
         int updated = entityManager.createNativeQuery("""
                 UPDATE `Order`
                 SET Status = :status
@@ -267,8 +271,79 @@ public class ServiceOrderService {
     }
 
     // ================================================================
-    // Private helpers (from Thang)
+    // Private helpers
     // ================================================================
+
+    private void deductInventoryForOrder(String orderId) {
+        String username = "system";
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                Object principal = auth.getPrincipal();
+                if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                    username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+                } else {
+                    username = principal.toString();
+                }
+            }
+        } catch (Exception e) {}
+
+        String employeeId = null;
+        try {
+            java.util.List<String> ids = entityManager.createNativeQuery("SELECT UserId FROM `User` WHERE Username = :uname")
+                .setParameter("uname", username)
+                .getResultList();
+            if (!ids.isEmpty()) employeeId = ids.get(0);
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
+        if (employeeId == null) {
+            System.err.println("WARN: Could not resolve employeeId for username: " + username);
+            return; // Cannot adjust inventory without a valid employee
+        }
+
+        java.util.List<Object[]> deductions = entityManager.createNativeQuery("""
+            SELECT sir.InventoryItemId, SUM(sos.Quantity * sir.QuantityRequired)
+            FROM ServiceOrder_Service sos
+            JOIN Service_Inventory_Recipe sir ON sos.ServiceId = sir.ServiceId
+            WHERE sos.OrderId = :orderId
+            GROUP BY sir.InventoryItemId
+        """).setParameter("orderId", orderId).getResultList();
+
+        for (Object[] row : deductions) {
+            String itemId = (String) row[0];
+            Number totalDeduct = (Number) row[1];
+            if (totalDeduct == null) continue;
+            int deductQty = totalDeduct.intValue();
+            if (deductQty <= 0) continue;
+            
+            entityManager.createNativeQuery("""
+                UPDATE InventoryItem
+                SET StockQuantity = GREATEST(0, StockQuantity - :qty)
+                WHERE ItemId = :itemId
+            """)
+            .setParameter("qty", deductQty)
+            .setParameter("itemId", itemId)
+            .executeUpdate();
+
+            String adjId = "ADJ-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMddHHmmss")) + "-" + String.format("%04d", (int)(Math.random() * 10000));
+            try {
+                entityManager.createNativeQuery("""
+                    INSERT INTO InventoryAdjustment (AdjustmentId, ItemId, EmployeeId, Quantity, Type, Description)
+                    VALUES (:adjId, :itemId, :empId, :qty, 'CONSUME', :desc)
+                """)
+                .setParameter("adjId", adjId)
+                .setParameter("itemId", itemId)
+                .setParameter("empId", employeeId)
+                .setParameter("qty", -deductQty)
+                .setParameter("desc", "Bán kèm dịch vụ (Order " + orderId + ")")
+                .executeUpdate();
+            } catch (Exception e) {
+                // Ignore failure on audit log insert
+            }
+        }
+    }
 
     private ServiceOrderSummary getOrder(String orderId) {
         try {
