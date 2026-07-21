@@ -539,6 +539,15 @@ INSERT INTO Service (ServiceId, ServiceName, Description, UnitPrice, IsComposite
 ('SRV-00000102', 'Gói Spa Thư giãn', 'Bao gồm Massage chân + Xông hơi + Trà thảo mộc', 500000.00, 1, 1),
 ('SRV-00000103', 'Combo Hạnh phúc', 'Đưa đón sân bay 2 chiều + Trang trí phòng tân hôn', 900000.00, 1, 1);
 
+INSERT INTO Service_Inventory_Recipe (ServiceId, InventoryItemId, QuantityRequired) VALUES
+('SRV-00000001', 'INV-00000010', 1), -- Giặt ủi dùng 1 Nước giặt công nghiệp
+('SRV-00000003', 'INV-00000005', 2), -- Massage chân dùng 2 Khăn tắm trắng
+('SRV-00000004', 'INV-00000006', 1), -- Trang trí phòng thay 1 Drap giường King mới
+('SRV-00000101', 'INV-00000003', 2), -- Gói Sinh nhật dùng 2 Nước suối
+('SRV-00000101', 'INV-00000004', 2), -- Gói Sinh nhật dùng 2 Coca Cola
+('SRV-00000101', 'INV-00000009', 2), -- Gói Sinh nhật dùng 2 Bia Heineken
+('SRV-00000102', 'INV-00000005', 3); -- Gói Spa Thư giãn dùng 3 Khăn tắm trắng
+
 INSERT INTO Room (RoomId, RoomTypeId, RoomName, FloorNumber, Status, Description, IsActive) VALUES
 ('101', 'RTP-00000001', 'Standard 101', 1, 'AVAILABLE', 'Phòng ở tầng 1', 1),
 ('102', 'RTP-00000001', 'Standard 102', 1, 'CLEANING', 'Đang dọn dẹp', 1),
