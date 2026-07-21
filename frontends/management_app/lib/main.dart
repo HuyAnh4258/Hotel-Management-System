@@ -8,6 +8,7 @@ import 'package:management_app/modules/auth/viewmodel/auth_viewmodel.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/inventory_viewmodel.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/voucher_viewmodel.dart';
 import 'package:management_app/modules/catalogue_management/viewmodel/service_viewmodel.dart';
+import 'package:management_app/modules/property_management/viewmodel/property_viewmodel.dart';
 import 'package:management_app/core/services/websocket_service.dart';
 import 'package:management_app/routes/app_pages.dart';
 
@@ -27,6 +28,7 @@ void main() async {
   Get.put(ServiceViewModel(dioClient));
   Get.put(InventoryViewModel(dioClient));
   Get.put(VoucherViewModel(dioClient));
+  Get.put(PropertyViewModel());
   Get.put(WebSocketService());
 
   runApp(const FptGoldenApp());

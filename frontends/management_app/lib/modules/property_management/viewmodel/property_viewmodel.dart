@@ -344,6 +344,16 @@ class PropertyViewModel extends GetxController {
     }
   }
 
+  Future<String?> setRoomTypePrice(String id, double price) async {
+    try {
+      await PropertyApi.updateRoomType(id, {'basePrice': price});
+      await refreshAllData();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   Future<void> toggleRoomTypeActive(String id, bool active) async {
     isLoading.value = true;
     try {

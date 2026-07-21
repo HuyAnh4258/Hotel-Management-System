@@ -22,7 +22,7 @@ class _PropertyPageState extends State<PropertyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = Get.put(PropertyViewModel());
+    final vm = Get.find<PropertyViewModel>();
     final isWide = MediaQuery.of(context).size.width > 700;
 
     return Scaffold(
