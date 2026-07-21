@@ -23,8 +23,7 @@ public record BookingSummary(
     }
 
     public boolean canRequestCancel() {
-        return status != null
-                && ("PENDING".equalsIgnoreCase(status) || "CHECKED_IN".equalsIgnoreCase(status));
+        return "PENDING".equalsIgnoreCase(status);
     }
 
     public boolean isWaitingCancelApproval() {

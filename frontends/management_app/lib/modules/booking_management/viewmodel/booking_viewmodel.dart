@@ -134,10 +134,7 @@ class BookingApi {
   }
 
   static Future<BookingSummary> requestCancelBooking(String bookingId) async {
-    final response = await _dio.patch(
-      '/$bookingId/status',
-      queryParameters: {'status': 'WAITING_APPROVAL'},
-    );
+    final response = await _dio.patch('/$bookingId/cancel-request');
     return BookingSummary.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -351,7 +348,7 @@ class BookingSummary {
 
   bool get canRequestCancel {
     final normalizedStatus = status.toUpperCase();
-    return normalizedStatus == 'PENDING' || normalizedStatus == 'CHECKED_IN';
+    return normalizedStatus == 'PENDING';
   }
 
   bool get hasReachedCheckinDeadline {
