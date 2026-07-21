@@ -19,7 +19,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
   late Future<HomepageData> _homepageFuture;
   Future<List<BookingSummary>>? _userBookingsFuture;
   int _selectedIndex = 0;
-  String _roomTypeQuery = '';
 
   @override
   void initState() {
@@ -201,12 +200,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                   return _SearchRoomTypeTab(
                     data: data,
                     fullName: fullName,
-                    query: _roomTypeQuery,
-                    onQueryChanged: (value) {
-                      setState(() {
-                        _roomTypeQuery = value;
-                      });
-                    },
                     onRoomChanged: _reload,
                   );
               }
@@ -313,15 +306,11 @@ class _SearchRoomTypeTab extends StatefulWidget {
   const _SearchRoomTypeTab({
     required this.data,
     required this.fullName,
-    required this.query,
-    required this.onQueryChanged,
     required this.onRoomChanged,
   });
 
   final HomepageData data;
   final String fullName;
-  final String query;
-  final ValueChanged<String> onQueryChanged;
   final Future<void> Function() onRoomChanged;
 
   @override
@@ -338,6 +327,7 @@ class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
   DateTime? _checkinDate;
   DateTime? _checkoutDate;
   List<RoomModel>? _searchedRooms;
+  String _selectedRoomTypeId = '';
   bool _searching = false;
 
   @override
@@ -443,13 +433,20 @@ class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedQuery = widget.query.trim().toLowerCase();
+    final roomTypeOptions = widget.data.roomTypes;
+    final selectedRoomTypeExists =
+        _selectedRoomTypeId.isEmpty ||
+        roomTypeOptions.any(
+          (roomType) => roomType.roomTypeId == _selectedRoomTypeId,
+        );
+    final selectedRoomTypeId = selectedRoomTypeExists
+        ? _selectedRoomTypeId
+        : '';
     final availableRooms = _searchedRooms ?? widget.data.rooms;
     final roomTypes = widget.data.roomTypes
         .where((roomType) {
-          if (normalizedQuery.isEmpty) return true;
-          return roomType.name.toLowerCase().contains(normalizedQuery) ||
-              roomType.description.toLowerCase().contains(normalizedQuery);
+          if (selectedRoomTypeId.isEmpty) return true;
+          return roomType.roomTypeId == selectedRoomTypeId;
         })
         .where((roomType) {
           if (_searchedRooms == null) return true;
@@ -503,13 +500,34 @@ class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                onChanged: widget.onQueryChanged,
+              DropdownButtonFormField<String>(
+                initialValue: selectedRoomTypeId,
                 decoration: const InputDecoration(
                   labelText: 'Loại phòng',
-                  hintText: 'Suite, Deluxe, Superior...',
-                  prefixIcon: Icon(Icons.search_rounded),
+                  prefixIcon: Icon(Icons.king_bed_rounded),
                 ),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: '',
+                    child: Text('Tất cả loại phòng'),
+                  ),
+                  ...roomTypeOptions.map(
+                    (roomType) => DropdownMenuItem<String>(
+                      value: roomType.roomTypeId,
+                      child: Text(
+                        roomType.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: roomTypeOptions.isEmpty
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedRoomTypeId = value ?? '';
+                        });
+                      },
               ),
               const SizedBox(height: 14),
               SizedBox(
@@ -549,7 +567,8 @@ class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
                 const _EmptyHint(
                   icon: Icons.search_off_rounded,
                   title: 'Không tìm thấy loại phòng phù hợp',
-                  message: 'Hãy thử đổi ngày lưu trú hoặc từ khóa loại phòng.',
+                  message:
+                      'Hãy thử đổi ngày lưu trú hoặc chọn loại phòng khác.',
                 )
               else
                 ...roomTypes.map((roomType) {
@@ -2508,6 +2527,8 @@ Color _orderStatusColor(String status) {
       return Colors.green;
     case 'CANCELLED':
       return Colors.red;
+    case 'APPROVED':
+      return Colors.teal;
     case 'IN_PROGRESS':
       return Colors.blue;
     default:
@@ -2541,6 +2562,8 @@ String _orderStatusText(String status) {
   switch (status.toUpperCase()) {
     case 'PENDING':
       return 'Đang chờ';
+    case 'APPROVED':
+      return 'Đã duyệt';
     case 'IN_PROGRESS':
       return 'Đang xử lý';
     case 'COMPLETED':

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hms_shared/auth/auth_service.dart';
 import '../viewmodel/room_viewmodel.dart';
 
 class RoomListPage extends StatefulWidget {
@@ -46,11 +47,14 @@ class _RoomListPageState extends State<RoomListPage>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final auth = Get.find<AuthService>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quản lý Buồng phòng',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Quản lý Buồng phòng',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -58,6 +62,11 @@ class _RoomListPageState extends State<RoomListPage>
             icon: const Icon(Icons.person_outline_rounded),
             tooltip: 'Hồ sơ cá nhân',
             onPressed: () => Get.toNamed('/profile'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Đăng xuất',
+            onPressed: () => _confirmLogout(context, auth),
           ),
         ],
         bottom: TabBar(
@@ -73,8 +82,35 @@ class _RoomListPageState extends State<RoomListPage>
         color: Colors.grey.shade50,
         child: TabBarView(
           controller: _tabController,
-          children: _tabs.map((status) => _RoomListTab(status: status)).toList(),
+          children: _tabs
+              .map((status) => _RoomListTab(status: status))
+              .toList(),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context, AuthService auth) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xác nhận đăng xuất'),
+        content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await auth.logout();
+              Get.offAllNamed('/login');
+            },
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Đăng xuất'),
+          ),
+        ],
       ),
     );
   }
@@ -109,8 +145,9 @@ class _RoomListTabState extends State<_RoomListTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Cập nhật trạng thái thành công'),
-            backgroundColor: Colors.green),
+          content: Text('Cập nhật trạng thái thành công'),
+          backgroundColor: Colors.green,
+        ),
       );
       _loadRooms();
     } catch (e) {
@@ -133,15 +170,19 @@ class _RoomListTabState extends State<_RoomListTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Cập nhật trạng thái phòng ${room.roomId}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Cập nhật trạng thái phòng ${room.roomId}',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 20),
               if (room.status == 'DIRTY') ...[
                 ListTile(
-                  leading: const Icon(Icons.cleaning_services, color: Colors.blue),
+                  leading: const Icon(
+                    Icons.cleaning_services,
+                    color: Colors.blue,
+                  ),
                   title: const Text('Bắt đầu dọn dẹp (CLEANING)'),
                   onTap: () {
                     Navigator.pop(context);
@@ -163,7 +204,10 @@ class _RoomListTabState extends State<_RoomListTab> {
                   title: const Text('Dọn xong (Sẵn sàng đón khách)'),
                   onTap: () {
                     Navigator.pop(context);
-                    _updateStatus(room.roomId, 'AVAILABLE'); // CLEAN maps to AVAILABLE
+                    _updateStatus(
+                      room.roomId,
+                      'AVAILABLE',
+                    ); // CLEAN maps to AVAILABLE
                   },
                 ),
               ],
@@ -200,8 +244,10 @@ class _RoomListTabState extends State<_RoomListTab> {
                 Padding(
                   padding: EdgeInsets.only(top: 100),
                   child: Center(
-                    child: Text('Không có phòng nào trong trạng thái này',
-                        style: TextStyle(color: Colors.grey, fontSize: 16)),
+                    child: Text(
+                      'Không có phòng nào trong trạng thái này',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
                   ),
                 ),
               ],
@@ -224,8 +270,9 @@ class _RoomListTabState extends State<_RoomListTab> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                      color: _getStatusColor(room.status).withValues(alpha: 0.5),
-                      width: 1),
+                    color: _getStatusColor(room.status).withValues(alpha: 0.5),
+                    width: 1,
+                  ),
                 ),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
@@ -254,17 +301,23 @@ class _RoomListTabState extends State<_RoomListTab> {
                         Text(
                           room.roomId,
                           style: const TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold),
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           room.roomTypeName,
                           style: TextStyle(
-                              color: Colors.grey.shade700, fontSize: 14),
+                            color: Colors.grey.shade700,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: _getStatusColor(room.status),
                             borderRadius: BorderRadius.circular(12),
@@ -272,11 +325,12 @@ class _RoomListTabState extends State<_RoomListTab> {
                           child: Text(
                             room.status,
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
