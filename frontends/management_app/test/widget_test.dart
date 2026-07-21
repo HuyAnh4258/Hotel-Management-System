@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:management_app/modules/auth/view/splash_page.dart';
 
 void main() {
-  testWidgets('Management app renders splash shell', (
+  testWidgets('Ứng dụng quản lý hiển thị màn hình chờ', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -13,7 +13,7 @@ void main() {
         getPages: [
           GetPage(
             name: '/login',
-            page: () => const Scaffold(body: Text('Login ready')),
+            page: () => const Scaffold(body: Text('Màn đăng nhập sẵn sàng')),
           ),
         ],
         home: const SplashPage(),
@@ -25,6 +25,6 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pump();
 
-    expect(find.text('Login ready'), findsOneWidget);
+    expect(find.text('Màn đăng nhập sẵn sàng'), findsOneWidget);
   });
 }

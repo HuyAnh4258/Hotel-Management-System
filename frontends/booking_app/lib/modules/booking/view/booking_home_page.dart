@@ -52,20 +52,20 @@ class _BookingHomePageState extends State<BookingHomePage> {
   String get _title {
     switch (_selectedIndex) {
       case 1:
-        return 'Booking Management';
+        return 'Quản lý đặt phòng';
       case 2:
-        return 'Booking History';
+        return 'Lịch sử đặt phòng';
       case 3:
-        return 'User Profile';
+        return 'Hồ sơ cá nhân';
       default:
-        return 'Search Rooms';
+        return 'Tìm phòng';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final authVm = Get.find<AuthViewModel>();
-    final fullName = authVm.currentUser.value?.fullName ?? 'Guest';
+    final fullName = authVm.currentUser.value?.fullName ?? 'Khách';
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -94,7 +94,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 20),
                 label: const Text(
-                  'Logout',
+                  'Đăng xuất',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -120,7 +120,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 ),
                 icon: const Icon(Icons.login_rounded, size: 20),
                 label: const Text(
-                  'Login',
+                  'Đăng nhập',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -137,19 +137,19 @@ class _BookingHomePageState extends State<BookingHomePage> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.search_rounded),
-            label: 'Search',
+            label: 'Tìm kiếm',
           ),
           NavigationDestination(
             icon: Icon(Icons.book_online_rounded),
-            label: 'Booking',
+            label: 'Đặt phòng',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),
-            label: 'History',
+            label: 'Lịch sử',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            label: 'Hồ sơ',
           ),
         ],
       ),
@@ -157,9 +157,9 @@ class _BookingHomePageState extends State<BookingHomePage> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFFFB347),
-              Color(0xFFFFD6A5),
-              Color(0xFFFFF4E6),
+              Color(0xFFFFB86B),
+              Color(0xFFFFE6C7),
+              Color(0xFFF5FAFF),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -229,9 +229,16 @@ class _GuestHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white),
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,7 +268,7 @@ class _GuestHeader extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Chào mừng đến với Khách sạn FPT Goden, khách sạn 5 sao hàng đầu Việt Nam.',
+            'Chào mừng đến với Khách sạn FPT Golden.',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: const Color(0xFFB85C00),
@@ -270,7 +277,7 @@ class _GuestHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Không gian sang trọng, ấm áp với tông màu cam nổi bật, mang đến trải nghiệm đẳng cấp và thân thiện cho khách hàng.',
+            'Tìm phòng phù hợp, xem đánh giá và đặt phòng chỉ trong vài bước.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade700,
               height: 1.5,
@@ -302,7 +309,7 @@ class _GuestHeader extends StatelessWidget {
   }
 }
 
-class _SearchRoomTypeTab extends StatelessWidget {
+class _SearchRoomTypeTab extends StatefulWidget {
   const _SearchRoomTypeTab({
     required this.data,
     required this.fullName,
@@ -318,91 +325,410 @@ class _SearchRoomTypeTab extends StatelessWidget {
   final Future<void> Function() onRoomChanged;
 
   @override
+  State<_SearchRoomTypeTab> createState() => _SearchRoomTypeTabState();
+}
+
+class _SearchRoomTypeTabState extends State<_SearchRoomTypeTab> {
+  final TextEditingController _checkinController = TextEditingController();
+  final TextEditingController _checkoutController = TextEditingController();
+  final TextEditingController _guestController = TextEditingController(
+    text: '2',
+  );
+
+  DateTime? _checkinDate;
+  DateTime? _checkoutDate;
+  List<RoomModel>? _searchedRooms;
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _checkinController.dispose();
+    _checkoutController.dispose();
+    _guestController.dispose();
+    super.dispose();
+  }
+
+  String _formatDateForApi(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
+  }
+
+  String _formatDateForDisplay(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$day/$month/${value.year}';
+  }
+
+  Future<void> _pickDate({required bool isCheckin}) async {
+    final now = DateTime.now();
+    final initialDate = isCheckin
+        ? (_checkinDate ?? now)
+        : (_checkoutDate ?? _checkinDate ?? now.add(const Duration(days: 1)));
+    final firstDate = isCheckin ? now : (_checkinDate ?? now);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isBefore(firstDate) ? firstDate : initialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(now.year + 2),
+      helpText: isCheckin ? 'Chọn ngày nhận phòng' : 'Chọn ngày trả phòng',
+      cancelText: 'Hủy',
+      confirmText: 'Chọn',
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      if (isCheckin) {
+        _checkinDate = picked;
+        _checkinController.text = _formatDateForDisplay(picked);
+        if (_checkoutDate != null && !_checkoutDate!.isAfter(picked)) {
+          _checkoutDate = null;
+          _checkoutController.clear();
+        }
+      } else {
+        _checkoutDate = picked;
+        _checkoutController.text = _formatDateForDisplay(picked);
+      }
+    });
+  }
+
+  Future<void> _searchAvailableRooms() async {
+    final checkin = _checkinDate;
+    final checkout = _checkoutDate;
+    final guests = int.tryParse(_guestController.text.trim());
+
+    if (checkin == null || checkout == null || !checkout.isAfter(checkin)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn ngày nhận/trả phòng hợp lệ'),
+        ),
+      );
+      return;
+    }
+    if (guests == null || guests <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Số khách phải lớn hơn 0')));
+      return;
+    }
+
+    setState(() {
+      _searching = true;
+    });
+
+    try {
+      final rooms = await BookingApi.getAvailableRooms(
+        checkin: _formatDateForApi(checkin),
+        checkout: _formatDateForApi(checkout),
+      );
+      if (!mounted) return;
+      setState(() {
+        _searchedRooms = rooms;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không tìm được phòng: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _searching = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final normalizedQuery = query.trim().toLowerCase();
-    final roomTypes = data.roomTypes.where((roomType) {
-      if (normalizedQuery.isEmpty) return true;
-      return roomType.name.toLowerCase().contains(normalizedQuery) ||
-          roomType.description.toLowerCase().contains(normalizedQuery);
-    }).toList();
+    final normalizedQuery = widget.query.trim().toLowerCase();
+    final availableRooms = _searchedRooms ?? widget.data.rooms;
+    final roomTypes = widget.data.roomTypes
+        .where((roomType) {
+          if (normalizedQuery.isEmpty) return true;
+          return roomType.name.toLowerCase().contains(normalizedQuery) ||
+              roomType.description.toLowerCase().contains(normalizedQuery);
+        })
+        .where((roomType) {
+          if (_searchedRooms == null) return true;
+          return availableRooms.any(
+            (room) => room.roomTypeId == roomType.roomTypeId,
+          );
+        })
+        .toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
       children: [
-        _GuestHeader(data: data, fullName: fullName),
+        _GuestHeader(data: widget.data, fullName: widget.fullName),
         const SizedBox(height: 18),
-        _TaskSectionCard(
-          title: 'Search by room type',
-          subtitle:
-              'Find a room type, check reviews, then choose a room to book.',
-          icon: Icons.search_rounded,
-          child: TextField(
-            onChanged: onQueryChanged,
-            decoration: const InputDecoration(
-              labelText: 'Room type',
-              hintText: 'Suite, Deluxe, Superior...',
-              prefixIcon: Icon(Icons.search_rounded),
-            ),
+        _BookingPanel(
+          icon: Icons.travel_explore_rounded,
+          title: 'Tìm phòng phù hợp',
+          subtitle: 'Chọn ngày lưu trú và số khách để xem phòng còn trống.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _checkinController,
+                readOnly: true,
+                onTap: () => _pickDate(isCheckin: true),
+                decoration: const InputDecoration(
+                  labelText: 'Ngày nhận phòng',
+                  hintText: 'Chọn ngày nhận phòng',
+                  suffixIcon: Icon(Icons.calendar_month_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _checkoutController,
+                readOnly: true,
+                onTap: () => _pickDate(isCheckin: false),
+                decoration: const InputDecoration(
+                  labelText: 'Ngày trả phòng',
+                  hintText: 'Chọn ngày trả phòng',
+                  suffixIcon: Icon(Icons.event_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _guestController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Số khách',
+                  prefixIcon: Icon(Icons.group_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: widget.onQueryChanged,
+                decoration: const InputDecoration(
+                  labelText: 'Loại phòng',
+                  hintText: 'Suite, Deluxe, Superior...',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _searching ? null : _searchAvailableRooms,
+                  icon: _searching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_rounded),
+                  label: const Text('Tìm phòng'),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 18),
-        Text(
-          'Room Types',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        if (roomTypes.isEmpty)
-          const Text('No room type matches your search')
-        else
-          ...roomTypes.map(
-            (roomType) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: RoomTypeCard(
-                title: roomType.name,
-                subtitle:
-                    '${roomType.description}\nPrice from ${roomType.basePrice.toStringAsFixed(0)}',
-                imagePath: roomType.imagePath,
-                onTap: () async {
-                  if (!context.mounted) return;
+        _BookingPanel(
+          icon: Icons.king_bed_rounded,
+          title: 'Loại phòng còn trống',
+          subtitle: _searchedRooms == null
+              ? 'Danh sách loại phòng hiện có trong khách sạn.'
+              : 'Kết quả phù hợp với ngày lưu trú vừa chọn.',
+          trailing: _searchedRooms != null
+              ? _Badge(
+                  label: '${availableRooms.length} phòng',
+                  color: Colors.blueGrey,
+                )
+              : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (roomTypes.isEmpty)
+                const _EmptyHint(
+                  icon: Icons.search_off_rounded,
+                  title: 'Không tìm thấy loại phòng phù hợp',
+                  message: 'Hãy thử đổi ngày lưu trú hoặc từ khóa loại phòng.',
+                )
+              else
+                ...roomTypes.map((roomType) {
+                  final roomsForType = availableRooms
+                      .where((room) => room.roomTypeId == roomType.roomTypeId)
+                      .toList();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: RoomTypeCard(
+                      title: roomType.name,
+                      subtitle: roomType.description,
+                      imagePath: roomType.imagePath,
+                      priceLabel: '${_formatMoney(roomType.basePrice)} / đêm',
+                      availableCount: roomsForType.length,
+                      onTap: () async {
+                        if (!context.mounted) return;
 
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => RoomTypeDetailPage(
-                        roomType: roomType,
-                        availableRooms: data.rooms
-                            .where(
-                              (room) => room.roomTypeId == roomType.roomTypeId,
-                            )
-                            .toList(),
-                        onViewFeedback: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const FeedbackListPage(),
+                        final changed = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => RoomTypeDetailPage(
+                              roomType: roomType,
+                              availableRooms: roomsForType,
+                              initialCheckin: _checkinDate,
+                              initialCheckout: _checkoutDate,
+                              initialGuestCount: int.tryParse(
+                                _guestController.text.trim(),
+                              ),
+                              onViewFeedback: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const FeedbackListPage(),
+                                  ),
+                                );
+                              },
+                              onSubmitFeedback: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SubmitFeedbackPage(),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                        onSubmitFeedback: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SubmitFeedbackPage(),
-                            ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+
+                        if (changed == true || changed == null) {
+                          await widget.onRoomChanged();
+                        }
+                      },
                     ),
                   );
-
-                  if (changed == true || changed == null) {
-                    await onRoomChanged();
-                  }
-                },
-              ),
-            ),
+                }),
+            ],
           ),
+        ),
       ],
+    );
+  }
+}
+
+class _BookingPanel extends StatelessWidget {
+  const _BookingPanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.grey.shade500),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade700),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -415,6 +741,54 @@ class _BookingManagementTab extends StatelessWidget {
 
   final Future<List<BookingSummary>> bookingsFuture;
   final Future<void> Function() onRefresh;
+
+  Future<void> _openBookingDetail(
+    BuildContext context,
+    BookingSummary booking,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
+    );
+    await onRefresh();
+  }
+
+  Future<void> _requestCancelBooking(
+    BuildContext context,
+    BookingSummary booking,
+  ) async {
+    final formData = await showDialog<_CancellationFormData>(
+      context: context,
+      builder: (context) => _BookingCancellationDialog(booking: booking),
+    );
+
+    if (formData == null) return;
+
+    try {
+      final updated = await BookingApi.requestCancelBooking(booking.bookingId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã gửi yêu cầu hủy đặt phòng ${updated.bookingId}. Lý do: ${formData.reason}',
+          ),
+        ),
+      );
+      await onRefresh();
+    } catch (e) {
+      if (!context.mounted) return;
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
+    }
+  }
+
+  bool _isCurrentBooking(BookingSummary booking) {
+    final status = booking.status.toUpperCase();
+    return status != 'CANCELLED' &&
+        status != 'CHECKED_OUT' &&
+        status != 'COMPLETED';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -433,8 +807,8 @@ class _BookingManagementTab extends StatelessWidget {
           );
         }
 
-        final activeBookings = (snapshot.data ?? [])
-            .where((booking) => !booking.isCancelled)
+        final currentBookings = (snapshot.data ?? [])
+            .where(_isCurrentBooking)
             .toList();
 
         return ListView(
@@ -442,59 +816,36 @@ class _BookingManagementTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
           children: [
             _TaskSectionCard(
-              title: 'Booking Management',
+              title: 'Quản lý đặt phòng',
               subtitle:
-                  'Manage your recent bookings and request services for your stay.',
+                  'Xem chi tiết đặt phòng hiện tại và gọi dịch vụ cho kỳ lưu trú.',
               icon: Icons.book_online_rounded,
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const MakeServiceOrderPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.room_service_rounded),
-                      label: const Text('Make Order'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CancelServiceOrderPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.cancel_schedule_send_rounded),
-                      label: const Text('Cancel Order'),
-                    ),
-                  ),
-                ],
+              child: _Badge(
+                label: '${currentBookings.length} đặt phòng hiện tại',
+                color: Colors.orange,
               ),
             ),
             const SizedBox(height: 18),
             Text(
-              'Your bookings',
+              'Đặt phòng hiện tại',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            if (activeBookings.isEmpty)
-              const Text('No active bookings yet')
+            if (currentBookings.isEmpty)
+              const Text('Chưa có đặt phòng hiện tại')
             else
-              ...activeBookings.map(
+              ...currentBookings.map(
                 (booking) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _CompactBookingCard(booking: booking),
+                  child: _CompactBookingCard(
+                    booking: booking,
+                    onViewDetails: () => _openBookingDetail(context, booking),
+                    onCancel: booking.canRequestCancel
+                        ? () => _requestCancelBooking(context, booking)
+                        : null,
+                  ),
                 ),
               ),
           ],
@@ -536,27 +887,152 @@ class _BookingHistoryTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
           children: [
             _TaskSectionCard(
-              title: 'Booking History',
-              subtitle: 'Review all booking requests made by your account.',
+              title: 'Lịch sử đặt phòng',
+              subtitle:
+                  'Xem lại tất cả đặt phòng được tạo bằng tài khoản của bạn.',
               icon: Icons.history_rounded,
               child: _Badge(
-                label: '${bookings.length} bookings',
+                label: '${bookings.length} đặt phòng',
                 color: Colors.orange,
               ),
             ),
             const SizedBox(height: 18),
             if (bookings.isEmpty)
-              const Text('No booking history yet')
+              const Text('Chưa có lịch sử đặt phòng')
             else
-              ...bookings.map(
-                (booking) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _CompactBookingCard(booking: booking),
-                ),
-              ),
+              _BookingHistoryTable(bookings: bookings),
           ],
         );
       },
+    );
+  }
+}
+
+class _BookingHistoryTable extends StatelessWidget {
+  const _BookingHistoryTable({required this.bookings});
+
+  final List<BookingSummary> bookings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: bookings
+          .map(
+            (booking) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _HistoryBookingCard(booking: booking),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _HistoryBookingCard extends StatelessWidget {
+  const _HistoryBookingCard({required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.055),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.receipt_long_rounded, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  booking.bookingId,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _Badge(
+                label: _bookingStatusText(booking.status),
+                color: Colors.orange,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _BookingInfoLine(
+            icon: Icons.calendar_month_rounded,
+            label: 'Lưu trú',
+            value: '${booking.expectedCheckin} - ${booking.expectedCheckout}',
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.meeting_room_rounded,
+            label: 'Phòng',
+            value: booking.rooms.isEmpty
+                ? 'Chưa có thông tin'
+                : booking.rooms.join(', '),
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.payments_rounded,
+            label: 'Tổng tiền',
+            value: _formatMoney(_moneyValue(booking.totalAmount)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingInfoLine extends StatelessWidget {
+  const _BookingInfoLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
     );
   }
 }
@@ -574,10 +1050,10 @@ class _UserProfileTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
       children: [
         _TaskSectionCard(
-          title: 'User Profile',
+          title: 'Hồ sơ cá nhân',
           subtitle: user == null
-              ? 'Sign in to manage your booking profile.'
-              : 'Manage the account information used for booking.',
+              ? 'Đăng nhập để quản lý hồ sơ đặt phòng.'
+              : 'Quản lý thông tin tài khoản dùng để đặt phòng.',
           icon: Icons.person_rounded,
           child: user == null
               ? SizedBox(
@@ -585,19 +1061,19 @@ class _UserProfileTab extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: () => Get.toNamed('/login'),
                     icon: const Icon(Icons.login_rounded),
-                    label: const Text('Login'),
+                    label: const Text('Đăng nhập'),
                   ),
                 )
               : Column(
                   children: [
-                    _ProfileRow(label: 'Full name', value: user.fullName),
-                    _ProfileRow(label: 'Username', value: user.username),
+                    _ProfileRow(label: 'Họ tên', value: user.fullName),
+                    _ProfileRow(label: 'Tên đăng nhập', value: user.username),
                     _ProfileRow(label: 'Email', value: user.email),
-                    _ProfileRow(label: 'Phone', value: user.phone),
+                    _ProfileRow(label: 'Số điện thoại', value: user.phone),
                     _ProfileRow(
-                      label: 'Roles',
+                      label: 'Vai trò',
                       value: user.roles.isEmpty
-                          ? 'Guest'
+                          ? 'Khách'
                           : user.roles.join(', '),
                     ),
                     const SizedBox(height: 12),
@@ -606,7 +1082,7 @@ class _UserProfileTab extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: authVm.logout,
                         icon: const Icon(Icons.logout_rounded),
-                        label: const Text('Logout'),
+                        label: const Text('Đăng xuất'),
                       ),
                     ),
                   ],
@@ -674,9 +1150,15 @@ class _TaskSectionCard extends StatelessWidget {
 }
 
 class _CompactBookingCard extends StatelessWidget {
-  const _CompactBookingCard({required this.booking});
+  const _CompactBookingCard({
+    required this.booking,
+    this.onViewDetails,
+    this.onCancel,
+  });
 
   final BookingSummary booking;
+  final VoidCallback? onViewDetails;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -702,20 +1184,192 @@ class _CompactBookingCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _Badge(label: booking.status, color: Colors.orange),
+              _Badge(
+                label: _bookingStatusText(booking.status),
+                color: Colors.orange,
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text('Booking: ${booking.bookingId}'),
+          Text('Mã đặt phòng: ${booking.bookingId}'),
           if (booking.rooms.isNotEmpty)
-            Text('Rooms: ${booking.rooms.join(", ")}'),
-          Text('Checkin: ${booking.expectedCheckin}'),
-          Text('Checkout: ${booking.expectedCheckout}'),
-          Text('Total: ${_formatMoney(_moneyValue(booking.totalAmount))}'),
+            Text('Phòng: ${booking.rooms.join(", ")}'),
+          Text('Ngày nhận phòng: ${booking.expectedCheckin}'),
+          Text('Ngày trả phòng: ${booking.expectedCheckout}'),
+          Text('Tổng tiền: ${_formatMoney(_moneyValue(booking.totalAmount))}'),
+          if (onViewDetails != null || onCancel != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (onViewDetails != null)
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: onViewDetails,
+                      icon: const Icon(Icons.visibility_rounded),
+                      label: const Text('Xem chi tiết'),
+                    ),
+                  ),
+                if (onViewDetails != null && onCancel != null)
+                  const SizedBox(width: 10),
+                if (onCancel != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onCancel,
+                      icon: const Icon(Icons.cancel_schedule_send_rounded),
+                      label: const Text('Hủy đặt phòng'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade200),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _BookingCancellationDialog extends StatefulWidget {
+  const _BookingCancellationDialog({required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  State<_BookingCancellationDialog> createState() =>
+      _BookingCancellationDialogState();
+}
+
+class _BookingCancellationDialogState
+    extends State<_BookingCancellationDialog> {
+  static const _reasons = [
+    'Thay đổi kế hoạch',
+    'Đặt sai ngày',
+    'Tìm được phòng khác',
+    'Lý do cá nhân',
+    'Khác',
+  ];
+
+  final TextEditingController _notesController = TextEditingController();
+  String? _selectedReason;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final reason = _selectedReason;
+    if (reason == null || reason.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Vui lòng chọn lý do hủy')));
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _CancellationFormData(
+        reason: reason,
+        notes: _notesController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final booking = widget.booking;
+
+    return AlertDialog(
+      title: const Text('Yêu cầu hủy đặt phòng'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Chi tiết đặt phòng',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Mã đặt phòng: ${booking.bookingId}'),
+                  Text(
+                    'Lưu trú: ${booking.expectedCheckin} - ${booking.expectedCheckout}',
+                  ),
+                  Text(
+                    booking.rooms.isEmpty
+                        ? 'Phòng: Chưa có thông tin'
+                        : 'Phòng: ${booking.rooms.join(", ")}',
+                  ),
+                  Text(
+                    'Tổng tiền: ${_formatMoney(_moneyValue(booking.totalAmount))}',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedReason,
+              decoration: const InputDecoration(
+                labelText: 'Lý do hủy (*)',
+                border: OutlineInputBorder(),
+              ),
+              items: _reasons
+                  .map(
+                    (reason) =>
+                        DropdownMenuItem(value: reason, child: Text(reason)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedReason = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 250,
+              decoration: const InputDecoration(
+                labelText: 'Ghi chú thêm',
+                hintText: 'Không bắt buộc: nhập thêm chi tiết...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Giữ đặt phòng'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Xác nhận hủy')),
+      ],
+    );
+  }
+}
+
+class _CancellationFormData {
+  const _CancellationFormData({required this.reason, required this.notes});
+
+  final String reason;
+  final String notes;
 }
 
 class _ProfileRow extends StatelessWidget {
@@ -738,7 +1392,463 @@ class _ProfileRow extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          Expanded(child: Text(value.isEmpty ? 'Not provided' : value)),
+          Expanded(child: Text(value.isEmpty ? 'Chưa cung cấp' : value)),
+        ],
+      ),
+    );
+  }
+}
+
+class BookingDetailPage extends StatefulWidget {
+  const BookingDetailPage({super.key, required this.booking});
+
+  final BookingSummary booking;
+
+  @override
+  State<BookingDetailPage> createState() => _BookingDetailPageState();
+}
+
+class _BookingDetailPageState extends State<BookingDetailPage> {
+  late BookingSummary _booking;
+  late Future<_BookingDetailData> _dataFuture;
+  final Map<String, int> _quantities = {};
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _booking = widget.booking;
+    _dataFuture = _loadData();
+  }
+
+  Future<_BookingDetailData> _loadData() async {
+    final servicesFuture = BookingApi.getServices();
+    final ordersFuture = BookingApi.getServiceOrdersByBooking(
+      _booking.bookingId,
+    );
+    return _BookingDetailData(
+      services: await servicesFuture,
+      orders: await ordersFuture,
+    );
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _dataFuture = _loadData();
+    });
+  }
+
+  bool get _canMakeOrder {
+    final status = _booking.status.toUpperCase();
+    return status == 'PENDING' ||
+        status == 'CONFIRMED' ||
+        status == 'CHECKED_IN' ||
+        status == 'CANCEL_REJECTED';
+  }
+
+  double _total(List<HotelServiceModel> services) {
+    return services.fold<double>(0, (sum, service) {
+      final quantity = _quantities[service.serviceId] ?? 0;
+      return sum + service.price * quantity;
+    });
+  }
+
+  Future<void> _requestCancelBooking() async {
+    final formData = await showDialog<_CancellationFormData>(
+      context: context,
+      builder: (context) => _BookingCancellationDialog(booking: _booking),
+    );
+
+    if (formData == null) return;
+
+    try {
+      final updated = await BookingApi.requestCancelBooking(_booking.bookingId);
+      if (!mounted) return;
+      setState(() {
+        _booking = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã gửi yêu cầu hủy đặt phòng ${updated.bookingId}. Lý do: ${formData.reason}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
+    }
+  }
+
+  Future<void> _cancelCancelRequest() async {
+    try {
+      final updated = await BookingApi.cancelCancelRequest(_booking.bookingId);
+      if (!mounted) return;
+      setState(() {
+        _booking = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã giữ lại đặt phòng ${updated.bookingId}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Hủy yêu cầu hủy thất bại: $e')));
+    }
+  }
+
+  Future<void> _submitOrder(List<HotelServiceModel> services) async {
+    final selectedServices = services
+        .map(
+          (service) => ServiceOrderLinePayload(
+            serviceId: service.serviceId,
+            quantity: _quantities[service.serviceId] ?? 0,
+          ),
+        )
+        .where((line) => line.quantity > 0)
+        .toList();
+
+    if (selectedServices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn ít nhất một dịch vụ')),
+      );
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      final order = await BookingApi.createServiceOrder(
+        CreateServiceOrderPayload(
+          bookingId: _booking.bookingId,
+          services: selectedServices,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _quantities.clear();
+        _dataFuture = _loadData();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã tạo đơn dịch vụ ${order.orderId}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gọi dịch vụ thất bại: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _cancelOrder(ServiceOrderModel order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hủy đơn dịch vụ'),
+        content: Text('Bạn muốn hủy đơn dịch vụ ${order.orderId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Không'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Hủy đơn'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await BookingApi.cancelServiceOrder(order.orderId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Đã hủy đơn dịch vụ ${order.orderId}')),
+    );
+    await _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _OrderScaffold(
+      title: 'Chi tiết đặt phòng',
+      child: RefreshIndicator(
+        onRefresh: _reload,
+        child: FutureBuilder<_BookingDetailData>(
+          future: _dataFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+                children: [_ErrorCard(onRetry: _reload)],
+              );
+            }
+
+            final data = snapshot.data ?? _BookingDetailData.empty();
+
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
+              children: [
+                _BookingDetailCard(
+                  booking: _booking,
+                  onRequestCancel: _booking.canRequestCancel
+                      ? _requestCancelBooking
+                      : null,
+                  onCancelCancelRequest: _booking.canCancelCancelRequest
+                      ? _cancelCancelRequest
+                      : null,
+                ),
+                const SizedBox(height: 18),
+                _InlineMakeOrderSection(
+                  services: data.services,
+                  quantities: _quantities,
+                  total: _total(data.services),
+                  canMakeOrder: _canMakeOrder,
+                  submitting: _submitting,
+                  onQuantityChanged: (serviceId, quantity) {
+                    setState(() {
+                      if (quantity <= 0) {
+                        _quantities.remove(serviceId);
+                      } else {
+                        _quantities[serviceId] = quantity;
+                      }
+                    });
+                  },
+                  onSubmit: () => _submitOrder(data.services),
+                ),
+                const SizedBox(height: 18),
+                _BookingOrderListSection(
+                  orders: data.orders,
+                  onCancel: _cancelOrder,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingDetailData {
+  const _BookingDetailData({required this.services, required this.orders});
+
+  final List<HotelServiceModel> services;
+  final List<ServiceOrderModel> orders;
+
+  factory _BookingDetailData.empty() =>
+      const _BookingDetailData(services: [], orders: []);
+}
+
+class _BookingDetailCard extends StatelessWidget {
+  const _BookingDetailCard({
+    required this.booking,
+    required this.onRequestCancel,
+    required this.onCancelCancelRequest,
+  });
+
+  final BookingSummary booking;
+  final VoidCallback? onRequestCancel;
+  final VoidCallback? onCancelCancelRequest;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TaskSectionCard(
+      title: 'Chi tiết đặt phòng',
+      subtitle: 'Thông tin lưu trú và trạng thái đặt phòng.',
+      icon: Icons.receipt_long_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  booking.bookingId,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _Badge(
+                label: _bookingStatusText(booking.status),
+                color: Colors.orange,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _BookingInfoLine(
+            icon: Icons.person_rounded,
+            label: 'Khách',
+            value: booking.guestName,
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.phone_rounded,
+            label: 'SĐT',
+            value: booking.phone,
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.calendar_month_rounded,
+            label: 'Lưu trú',
+            value: '${booking.expectedCheckin} - ${booking.expectedCheckout}',
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.meeting_room_rounded,
+            label: 'Phòng',
+            value: booking.rooms.isEmpty
+                ? 'Chưa có thông tin phòng'
+                : booking.rooms.join(', '),
+          ),
+          const SizedBox(height: 8),
+          _BookingInfoLine(
+            icon: Icons.payments_rounded,
+            label: 'Tổng tiền',
+            value: _formatMoney(_moneyValue(booking.totalAmount)),
+          ),
+          if (onRequestCancel != null || onCancelCancelRequest != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: booking.canCancelCancelRequest
+                  ? OutlinedButton.icon(
+                      onPressed: onCancelCancelRequest,
+                      icon: const Icon(Icons.undo_rounded),
+                      label: const Text('Giữ đặt phòng'),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: onRequestCancel,
+                      icon: const Icon(Icons.cancel_schedule_send_rounded),
+                      label: const Text('Hủy đặt phòng'),
+                    ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineMakeOrderSection extends StatelessWidget {
+  const _InlineMakeOrderSection({
+    required this.services,
+    required this.quantities,
+    required this.total,
+    required this.canMakeOrder,
+    required this.submitting,
+    required this.onQuantityChanged,
+    required this.onSubmit,
+  });
+
+  final List<HotelServiceModel> services;
+  final Map<String, int> quantities;
+  final double total;
+  final bool canMakeOrder;
+  final bool submitting;
+  final void Function(String serviceId, int quantity) onQuantityChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TaskSectionCard(
+      title: 'Gọi dịch vụ',
+      subtitle: 'Chọn dịch vụ cho đặt phòng này.',
+      icon: Icons.room_service_rounded,
+      child: Column(
+        children: [
+          if (!canMakeOrder)
+            const Text('Trạng thái đặt phòng này không thể gọi dịch vụ.')
+          else if (services.isEmpty)
+            const Text('Chưa có dịch vụ khả dụng')
+          else
+            ...services.map(
+              (service) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ServiceCatalogTile(
+                  service: service,
+                  quantity: quantities[service.serviceId] ?? 0,
+                  onChanged: (quantity) =>
+                      onQuantityChanged(service.serviceId, quantity),
+                ),
+              ),
+            ),
+          if (services.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _ServiceOrderSummaryCard(
+              services: services,
+              quantities: quantities,
+              total: total,
+            ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: !canMakeOrder || submitting ? null : onSubmit,
+              icon: submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle_rounded),
+              label: const Text('Đặt dịch vụ'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingOrderListSection extends StatelessWidget {
+  const _BookingOrderListSection({
+    required this.orders,
+    required this.onCancel,
+  });
+
+  final List<ServiceOrderModel> orders;
+  final Future<void> Function(ServiceOrderModel order) onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TaskSectionCard(
+      title: 'Chi tiết đơn dịch vụ',
+      subtitle: 'Các đơn dịch vụ đã tạo cho đặt phòng này.',
+      icon: Icons.list_alt_rounded,
+      child: Column(
+        children: [
+          if (orders.isEmpty)
+            const Text('Đặt phòng này chưa có đơn dịch vụ')
+          else
+            ...orders.map(
+              (order) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ServiceOrderCard(
+                  order: order,
+                  onCancel: order.canGuestCancel ? () => onCancel(order) : null,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -802,14 +1912,14 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
         .toList();
 
     if (bookingId == null || bookingId.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Select a booking first')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn đặt phòng trước')),
+      );
       return;
     }
     if (selectedServices.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one service')),
+        const SnackBar(content: Text('Vui lòng chọn ít nhất một dịch vụ')),
       );
       return;
     }
@@ -829,14 +1939,14 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
       setState(() {
         _quantities.clear();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Created order ${order.orderId}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã tạo đơn dịch vụ ${order.orderId}')),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Make order failed: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gọi dịch vụ thất bại: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -849,7 +1959,7 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
   @override
   Widget build(BuildContext context) {
     return _OrderScaffold(
-      title: 'Make Order',
+      title: 'Gọi dịch vụ',
       child: RefreshIndicator(
         onRefresh: _reload,
         child: FutureBuilder<_MakeServiceOrderData>(
@@ -883,15 +1993,15 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
               padding: const EdgeInsets.fromLTRB(16, 100, 16, 24),
               children: [
                 _ServiceOrderHeader(
-                  title: 'Make Order',
-                  subtitle: 'Guest selects a booking and service items.',
-                  badge: 'Total: ${_formatMoney(_total(data.services))}',
+                  title: 'Gọi dịch vụ',
+                  subtitle: 'Khách chọn đặt phòng và các dịch vụ cần đặt.',
+                  badge: 'Tổng tiền: ${_formatMoney(_total(data.services))}',
                 ),
                 const SizedBox(height: 18),
                 DropdownButtonFormField<String>(
                   initialValue: selectedExists ? _selectedBookingId : null,
                   decoration: const InputDecoration(
-                    labelText: 'Booking',
+                    labelText: 'Đặt phòng',
                     border: OutlineInputBorder(),
                   ),
                   items: activeBookings
@@ -913,9 +2023,11 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                 ),
                 const SizedBox(height: 18),
                 if (activeBookings.isEmpty)
-                  const Text('Create an active booking before making an order')
+                  const Text(
+                    'Vui lòng tạo đặt phòng đang hoạt động trước khi gọi dịch vụ',
+                  )
                 else if (data.services.isEmpty)
-                  const Text('No services available')
+                  const Text('Chưa có dịch vụ khả dụng')
                 else
                   ...data.services.map(
                     (service) => Padding(
@@ -935,6 +2047,14 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                       ),
                     ),
                   ),
+                if (data.services.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _ServiceOrderSummaryCard(
+                    services: data.services,
+                    quantities: _quantities,
+                    total: _total(data.services),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 FilledButton.icon(
                   onPressed: _submitting || activeBookings.isEmpty
@@ -947,12 +2067,83 @@ class _MakeServiceOrderPageState extends State<MakeServiceOrderPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.check_circle_rounded),
-                  label: const Text('Make Order'),
+                  label: const Text('Đặt dịch vụ'),
                 ),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ServiceOrderSummaryCard extends StatelessWidget {
+  const _ServiceOrderSummaryCard({
+    required this.services,
+    required this.quantities,
+    required this.total,
+  });
+
+  final List<HotelServiceModel> services;
+  final Map<String, int> quantities;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedServices = services
+        .where((service) => (quantities[service.serviceId] ?? 0) > 0)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFF94A3B8)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TÓM TẮT ĐƠN DỊCH VỤ',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const Divider(height: 22),
+          if (selectedServices.isEmpty)
+            const Text('Chưa chọn dịch vụ nào')
+          else
+            ...selectedServices.map((service) {
+              final quantity = quantities[service.serviceId] ?? 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('${service.serviceName} x $quantity')),
+                    Text(_formatMoney(service.price * quantity)),
+                  ],
+                ),
+              );
+            }),
+          const Divider(height: 22),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'TỔNG CHI PHÍ:',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                _formatMoney(total),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -996,16 +2187,16 @@ class _CancelServiceOrderPageState extends State<CancelServiceOrderPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Order'),
-        content: Text('Cancel service order ${order.orderId}?'),
+        title: const Text('Hủy đơn dịch vụ'),
+        content: Text('Bạn muốn hủy đơn dịch vụ ${order.orderId}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('No'),
+            child: const Text('Không'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel Order'),
+            child: const Text('Hủy đơn'),
           ),
         ],
       ),
@@ -1014,17 +2205,17 @@ class _CancelServiceOrderPageState extends State<CancelServiceOrderPage> {
 
     await BookingApi.cancelServiceOrder(order.orderId);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Cancelled order ${order.orderId}')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Đã hủy đơn dịch vụ ${order.orderId}')),
+    );
     await _reload();
   }
 
   @override
   Widget build(BuildContext context) {
     return _ServiceOrderListBody(
-      title: 'Cancel Order',
-      subtitle: 'Guest can cancel pending or in-progress service orders.',
+      title: 'Hủy đơn dịch vụ',
+      subtitle: 'Khách có thể hủy đơn dịch vụ sau khi lễ tân duyệt.',
       ordersFuture: _ordersFuture,
       onRefresh: _reload,
       onCancel: _cancel,
@@ -1089,7 +2280,7 @@ class _ServiceOrderListBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 if (orders.isEmpty)
-                  const Text('No service orders yet')
+                  const Text('Chưa có đơn dịch vụ')
                 else
                   ...orders.map(
                     (order) => Padding(
@@ -1276,16 +2467,16 @@ class _ServiceOrderCard extends StatelessWidget {
                 ),
               ),
               _Badge(
-                label: order.status,
+                label: _orderStatusText(order.status),
                 color: _orderStatusColor(order.status),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text('Order: ${order.orderId}'),
-          Text('Booking: ${order.bookingId}'),
-          Text('Phone: ${order.phone}'),
-          Text('Total: ${_formatMoney(order.totalAmount)}'),
+          Text('Mã đơn: ${order.orderId}'),
+          Text('Mã đặt phòng: ${order.bookingId}'),
+          Text('SĐT: ${order.phone}'),
+          Text('Tổng tiền: ${_formatMoney(order.totalAmount)}'),
           if (order.services.isNotEmpty) ...[
             const SizedBox(height: 8),
             ...order.services.map(
@@ -1301,7 +2492,7 @@ class _ServiceOrderCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onCancel,
                 icon: const Icon(Icons.cancel_schedule_send_rounded),
-                label: const Text('Cancel Order'),
+                label: const Text('Hủy đơn dịch vụ'),
               ),
             ),
           ],
@@ -1321,6 +2512,62 @@ Color _orderStatusColor(String status) {
       return Colors.blue;
     default:
       return Colors.orange;
+  }
+}
+
+String _bookingStatusText(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return 'Đang chờ';
+    case 'CONFIRMED':
+      return 'Đã xác nhận';
+    case 'CHECKED_IN':
+      return 'Đã nhận phòng';
+    case 'CHECKED_OUT':
+    case 'COMPLETED':
+      return 'Đã trả phòng';
+    case 'WAITING_APPROVAL':
+      return 'Đợi duyệt hủy';
+    case 'CANCEL_REJECTED':
+      return 'Từ chối hủy';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    default:
+      return status;
+  }
+}
+
+String _orderStatusText(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return 'Đang chờ';
+    case 'IN_PROGRESS':
+      return 'Đang xử lý';
+    case 'COMPLETED':
+      return 'Hoàn tất';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    default:
+      return status;
+  }
+}
+
+String _roomStatusText(String status) {
+  switch (status.toUpperCase()) {
+    case 'AVAILABLE':
+      return 'Còn trống';
+    case 'BOOKED':
+      return 'Đã đặt';
+    case 'OCCUPIED':
+      return 'Đang sử dụng';
+    case 'MAINTENANCE':
+      return 'Bảo trì';
+    case 'DIRTY':
+      return 'Cần dọn';
+    case 'CLEANING':
+      return 'Đang dọn';
+    default:
+      return status;
   }
 }
 
@@ -1360,7 +2607,7 @@ class _FeedbackListPageState extends State<FeedbackListPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Review & Feedback'),
+        title: const Text('Đánh giá & phản hồi'),
         backgroundColor: Colors.transparent,
       ),
       body: Container(
@@ -1400,7 +2647,7 @@ class _FeedbackListPageState extends State<FeedbackListPage> {
                   _FeedbackHeader(totalFeedbacks: feedbacks.length),
                   const SizedBox(height: 18),
                   if (feedbacks.isEmpty)
-                    const Text('No feedback yet')
+                    const Text('Chưa có đánh giá nào')
                   else
                     ...feedbacks.map(
                       (feedback) => Padding(
@@ -1458,9 +2705,9 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
   Future<void> _submit() async {
     final bookingId = _selectedBookingId;
     if (bookingId == null || bookingId.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Select a booking first')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn đặt phòng trước')),
+      );
       return;
     }
 
@@ -1480,7 +2727,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Saved feedback for booking ${feedback.bookingId}'),
+          content: Text('Đã lưu đánh giá cho đặt phòng ${feedback.bookingId}'),
         ),
       );
       Navigator.of(context).pushReplacement(
@@ -1490,7 +2737,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Submit feedback failed: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gửi đánh giá thất bại: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -1507,7 +2754,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Submit Feedback'),
+        title: const Text('Gửi đánh giá'),
         backgroundColor: Colors.transparent,
       ),
       body: Container(
@@ -1539,7 +2786,10 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                 );
               }
 
-              final bookings = snapshot.data ?? [];
+              final bookings = (snapshot.data ?? []).where((booking) {
+                final status = booking.status.toUpperCase();
+                return status == 'CHECKED_OUT' || status == 'COMPLETED';
+              }).toList();
               final selectedExists = bookings.any(
                 (booking) => booking.bookingId == _selectedBookingId,
               );
@@ -1550,29 +2800,36 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                 children: [
                   const _SubmitFeedbackHeader(),
                   const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedExists ? _selectedBookingId : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Booking',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: bookings
-                        .map(
-                          (booking) => DropdownMenuItem(
-                            value: booking.bookingId,
-                            child: Text(
-                              '${booking.bookingId} - ${booking.guestName}',
-                              overflow: TextOverflow.ellipsis,
+                  if (bookings.isEmpty)
+                    const _EmptyHint(
+                      icon: Icons.rate_review_outlined,
+                      title: 'Chưa có đặt phòng đã hoàn tất',
+                      message: 'Bạn có thể gửi đánh giá sau khi đã trả phòng.',
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedExists ? _selectedBookingId : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Đặt phòng đã hoàn tất',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: bookings
+                          .map(
+                            (booking) => DropdownMenuItem(
+                              value: booking.bookingId,
+                              child: Text(
+                                '${booking.bookingId} - ${booking.guestName}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedBookingId = value;
-                      });
-                    },
-                  ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBookingId = value;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 16),
                   _RatingSelector(
                     rating: _rating,
@@ -1588,13 +2845,13 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                     minLines: 4,
                     maxLines: 6,
                     decoration: const InputDecoration(
-                      labelText: 'Comment',
+                      labelText: 'Bình luận',
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 18),
                   FilledButton.icon(
-                    onPressed: _submitting ? null : _submit,
+                    onPressed: _submitting || bookings.isEmpty ? null : _submit,
                     icon: _submitting
                         ? const SizedBox(
                             width: 18,
@@ -1602,7 +2859,7 @@ class _SubmitFeedbackPageState extends State<SubmitFeedbackPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.send_rounded),
-                    label: const Text('Submit Review & Feedback'),
+                    label: const Text('Gửi đánh giá & phản hồi'),
                   ),
                 ],
               );
@@ -1632,20 +2889,20 @@ class _FeedbackHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Review & Feedback',
+            'Đánh giá & phản hồi',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
-            'View guest reviews and ratings submitted for bookings.',
+            'Xem đánh giá và xếp hạng của khách cho các đặt phòng.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
           ),
           const SizedBox(height: 12),
-          _Badge(label: '$totalFeedbacks feedback', color: Colors.orange),
+          _Badge(label: '$totalFeedbacks đánh giá', color: Colors.orange),
         ],
       ),
     );
@@ -1668,14 +2925,14 @@ class _SubmitFeedbackHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Submit Review & Feedback',
+            'Gửi đánh giá & phản hồi',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
-            'Select a booking, choose a rating, and add a short comment.',
+            'Chọn đặt phòng, chấm điểm và viết nhận xét ngắn.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
@@ -1707,7 +2964,7 @@ class _FeedbackCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  feedback.guestName.isEmpty ? 'Guest' : feedback.guestName,
+                  feedback.guestName.isEmpty ? 'Khách' : feedback.guestName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -1717,15 +2974,18 @@ class _FeedbackCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('Booking: ${feedback.bookingId}'),
+          Text('Mã đặt phòng: ${feedback.bookingId}'),
           if (feedback.rooms.isNotEmpty)
-            Text('Room: ${feedback.rooms.join(", ")}'),
+            Text('Phòng: ${feedback.rooms.join(", ")}'),
           if (feedback.comment.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(feedback.comment),
           ],
           const SizedBox(height: 10),
-          _Badge(label: feedback.bookingStatus, color: Colors.orange),
+          _Badge(
+            label: _bookingStatusText(feedback.bookingStatus),
+            color: Colors.orange,
+          ),
         ],
       ),
     );
@@ -1753,7 +3013,7 @@ class _RatingSelector extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'Rating',
+              'Xếp hạng',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -1831,7 +3091,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       builder: (context) => AlertDialog(
         title: const Text('Yêu cầu hủy đơn hàng'),
         content: Text(
-          'Bạn có chắc muốn gửi yêu cầu hủy booking ${booking.bookingId} không?',
+          'Bạn có chắc muốn gửi yêu cầu hủy đặt phòng ${booking.bookingId} không?',
         ),
         actions: [
           TextButton(
@@ -1859,9 +3119,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       await _reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $e')));
+      final message = BookingApi.errorMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gửi yêu cầu hủy thất bại: $message')),
+      );
     }
   }
 
@@ -1871,7 +3132,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       builder: (context) => AlertDialog(
         title: const Text('Hủy yêu cầu hủy'),
         content: Text(
-          'Bạn có chắc muốn hủy yêu cầu hủy booking ${booking.bookingId} không?',
+          'Bạn có chắc muốn hủy yêu cầu hủy đặt phòng ${booking.bookingId} không?',
         ),
         actions: [
           TextButton(
@@ -1892,7 +3153,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       await BookingApi.cancelCancelRequest(booking.bookingId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã hủy yêu cầu hủy booking')),
+        const SnackBar(content: Text('Đã hủy yêu cầu hủy đặt phòng')),
       );
       await _reload();
     } catch (e) {
@@ -2022,9 +3283,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _OrderHistoryCard(
                           booking: booking,
-                          onRequestCancel:
-                              booking.canRequestCancel &&
-                                  !booking.hasReachedCheckinDeadline
+                          onRequestCancel: booking.canRequestCancel
                               ? () => _requestCancel(booking)
                               : null,
                           onCancelCancelRequest: booking.canCancelCancelRequest
@@ -2074,13 +3333,13 @@ class _OrderHistoryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Xem thông tin booking, cập nhật đơn hàng hoặc gửi yêu cầu hủy để lễ tân duyệt.',
+            'Xem thông tin đặt phòng, cập nhật đơn hàng hoặc gửi yêu cầu hủy để lễ tân duyệt.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
           ),
           const SizedBox(height: 12),
-          _Badge(label: '$totalBookings booking', color: Colors.orange),
+          _Badge(label: '$totalBookings đặt phòng', color: Colors.orange),
         ],
       ),
     );
@@ -2104,9 +3363,6 @@ class _OrderHistoryCard extends StatelessWidget {
     if (booking.isWaitingCancelApproval) return 'Đợi lễ tân duyệt hủy';
     if (booking.isCancelled) return 'Đơn hàng đã hủy';
     if (booking.isCancelRejected) return 'Yêu cầu hủy đã từ chối';
-    if (booking.canRequestCancel && booking.hasReachedCheckinDeadline) {
-      return 'Đã đến hạn check-in, không thể hủy đơn hàng';
-    }
     return booking.status;
   }
 
@@ -2127,11 +3383,6 @@ class _OrderHistoryCard extends StatelessWidget {
     final actionIcon = booking.isWaitingCancelApproval
         ? Icons.undo_rounded
         : Icons.cancel_schedule_send_rounded;
-    final disableCancel =
-        !booking.isWaitingCancelApproval &&
-        booking.canRequestCancel &&
-        booking.hasReachedCheckinDeadline;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2149,15 +3400,15 @@ class _OrderHistoryCard extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          Text('Mã booking: ${booking.bookingId}'),
+          Text('Mã đặt phòng: ${booking.bookingId}'),
           Text('SĐT: ${booking.phone}'),
           Text(
             booking.rooms.isEmpty
                 ? 'Phòng: Chưa có thông tin'
                 : 'Phòng: ${booking.rooms.join(", ")}',
           ),
-          Text('Checkin: ${booking.expectedCheckin}'),
-          Text('Checkout: ${booking.expectedCheckout}'),
+          Text('Ngày nhận phòng: ${booking.expectedCheckin}'),
+          Text('Ngày trả phòng: ${booking.expectedCheckout}'),
           Text('Tổng tiền: ${booking.totalAmount ?? 0}'),
           const SizedBox(height: 8),
           _Badge(label: _statusText, color: _statusColor(context)),
@@ -2165,22 +3416,7 @@ class _OrderHistoryCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: disableCancel
-                  ? null
-                  : () {
-                      if (booking.hasReachedCheckinDeadline &&
-                          !booking.isWaitingCancelApproval) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Đã đến hạn check-in, không thể hủy đơn hàng',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      actionCallback?.call();
-                    },
+              onPressed: actionCallback,
               icon: Icon(actionIcon),
               label: Text(actionLabel),
             ),
@@ -2247,7 +3483,7 @@ class _CancelRequestsPageState extends State<CancelRequestsPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Duyệt hủy booking'),
+        title: const Text('Duyệt hủy đặt phòng'),
         backgroundColor: Colors.transparent,
       ),
       body: Container(
@@ -2380,7 +3616,7 @@ class _CancelRequestCard extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          Text('Mã booking: ${booking.bookingId}'),
+          Text('Mã đặt phòng: ${booking.bookingId}'),
           Text('SĐT: ${booking.phone}'),
           Text(
             booking.rooms.isEmpty
@@ -2594,7 +3830,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Check-in / Check-out'),
+        title: const Text('Nhận phòng / Trả phòng'),
         backgroundColor: Colors.transparent,
       ),
       body: Container(
@@ -2638,7 +3874,7 @@ class _CheckInOutPageState extends State<CheckInOutPage> {
                   if (bookings.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.only(top: 24),
-                      child: Text('Không có booking nào theo ngày đã chọn'),
+                      child: Text('Không có đặt phòng nào theo ngày đã chọn'),
                     );
                   }
 
@@ -2702,7 +3938,7 @@ class _CheckInOutHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Check-in / Check-out',
+            'Nhận phòng / Trả phòng',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -2725,11 +3961,14 @@ class _CheckInOutHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _Badge(label: 'PENDING', color: schemeColor(context).tertiary),
+              _Badge(label: 'Đang chờ', color: schemeColor(context).tertiary),
               const SizedBox(width: 8),
-              _Badge(label: 'CHECKED_IN', color: schemeColor(context).primary),
+              _Badge(
+                label: 'Đã nhận phòng',
+                color: schemeColor(context).primary,
+              ),
               const SizedBox(width: 8),
-              _Badge(label: 'CHECKED_OUT', color: Colors.green),
+              _Badge(label: 'Đã trả phòng', color: Colors.green),
             ],
           ),
         ],
@@ -2783,29 +4022,29 @@ class _RoomStatusHeader extends StatelessWidget {
             runSpacing: 8,
             children: [
               _StatusFilterChip(
-                label: 'AVAILABLE',
+                label: 'Còn trống',
                 selected: selectedRoomStatus == 'AVAILABLE',
                 onTap: () => onStatusChanged('AVAILABLE'),
               ),
               _StatusFilterChip(
-                label: 'BOOKED',
+                label: 'Đã đặt',
                 selected: selectedRoomStatus == 'BOOKED',
                 onTap: () => onStatusChanged('BOOKED'),
               ),
               _StatusFilterChip(
-                label: 'MAINTENANCE',
+                label: 'Bảo trì',
                 selected: selectedRoomStatus == 'MAINTENANCE',
                 onTap: () => onStatusChanged('MAINTENANCE'),
               ),
               _StatusFilterChip(
-                label: 'ALL',
+                label: 'Tất cả',
                 selected: selectedRoomStatus == 'ALL',
                 onTap: () => onStatusChanged('ALL'),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _Badge(label: 'AVAILABLE', color: scheme.primary),
+          _Badge(label: 'Còn trống', color: scheme.primary),
         ],
       ),
     );
@@ -2852,7 +4091,7 @@ class _RoomStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text('Tầng ${room.floor}'),
-                Text('Trạng thái: ${room.status}'),
+                Text('Trạng thái: ${_roomStatusText(room.status)}'),
               ],
             ),
           ),
@@ -2926,12 +4165,10 @@ class _BookingCard extends StatelessWidget {
                 ? 'Phòng: Chưa có thông tin'
                 : 'Phòng: ${booking.rooms.join(", ")}',
           ),
-          Text('Checkin: ${booking.expectedCheckin}'),
-          Text('Checkout: ${booking.expectedCheckout}'),
-          Text(
-            'Total payment: ${_formatMoney(_moneyValue(booking.totalAmount))}',
-          ),
-          Text('Status: ${booking.status}'),
+          Text('Ngày nhận phòng: ${booking.expectedCheckin}'),
+          Text('Ngày trả phòng: ${booking.expectedCheckout}'),
+          Text('Tổng tiền: ${_formatMoney(_moneyValue(booking.totalAmount))}'),
+          Text('Trạng thái: ${_bookingStatusText(booking.status)}'),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -2939,7 +4176,7 @@ class _BookingCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton(
                     onPressed: onCheckIn,
-                    child: const Text('Checkin'),
+                    child: const Text('Nhận phòng'),
                   ),
                 ),
               if (onCheckIn != null && onCheckOut != null)
@@ -2948,7 +4185,7 @@ class _BookingCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton(
                     onPressed: onCheckOut,
-                    child: const Text('CheckOut'),
+                    child: const Text('Trả phòng'),
                   ),
                 ),
             ],

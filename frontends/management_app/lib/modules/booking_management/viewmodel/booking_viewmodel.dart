@@ -1,25 +1,21 @@
-import 'package:dio/dio.dart';
 import 'dart:io' show Platform;
+
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BookingApi {
   BookingApi._();
 
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:8080/api/booking';
+  static String get _apiBaseUrl {
+    if (kIsWeb) return 'http://localhost:8080';
     try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api/booking';
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
     } catch (_) {}
-    return 'http://localhost:8080/api/booking';
+    return 'http://localhost:8080';
   }
 
-  static String get serviceOrderBaseUrl {
-    if (kIsWeb) return 'http://localhost:8080/api/orders';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api/orders';
-    } catch (_) {}
-    return 'http://localhost:8080/api/orders';
-  }
+  static String get baseUrl => '$_apiBaseUrl/api/booking';
+  static String get serviceOrderBaseUrl => '$_apiBaseUrl/api/orders';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -138,10 +134,7 @@ class BookingApi {
   }
 
   static Future<BookingSummary> requestCancelBooking(String bookingId) async {
-    final response = await _dio.patch(
-      '/$bookingId/status',
-      queryParameters: {'status': 'WAITING_APPROVAL'},
-    );
+    final response = await _dio.patch('/$bookingId/cancel-request');
     return BookingSummary.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -204,7 +197,7 @@ class BookingApi {
   }
 
   static Future<List<ServiceOrderModel>> getServiceOrders() async {
-    final response = await _serviceOrderDio.get('');
+    final response = await _serviceOrderDio.get('/list');
     final data = response.data as List<dynamic>;
     return data
         .map(
@@ -343,21 +336,19 @@ class BookingSummary {
 
   bool canCheckIn(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckin.startsWith(today) &&
-        (normalizedStatus == 'PENDING' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'PENDING' ||
+        normalizedStatus == 'CONFIRMED' ||
+        normalizedStatus == 'CANCEL_REJECTED';
   }
 
   bool canCheckOut(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckout.startsWith(today) &&
-        (normalizedStatus == 'CHECKED_IN' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'CHECKED_IN';
   }
 
   bool get canRequestCancel {
     final normalizedStatus = status.toUpperCase();
-    return normalizedStatus == 'PENDING' || normalizedStatus == 'CHECKED_IN';
+    return normalizedStatus == 'PENDING';
   }
 
   bool get hasReachedCheckinDeadline {
@@ -504,7 +495,7 @@ class ServiceOrderModel {
 
   bool get canGuestCancel {
     final normalized = status.toUpperCase();
-    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+    return normalized == 'IN_PROGRESS';
   }
 
   factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {

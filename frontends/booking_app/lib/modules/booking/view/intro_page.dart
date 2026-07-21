@@ -5,11 +5,11 @@ import 'package:get/get.dart';
 import '../../auth/viewmodel/auth_viewmodel.dart';
 
 // ─── Colour Tokens ────────────────────────────────────────────────────────────
-const _kDeep    = Color(0xFF1C0A04);   // nền nâu tối
-const _kNavy    = Color(0xFF2D1408);   // nền phụ
-const _kGold    = Color(0xFFF97316);   // cam chủ đạo
+const _kDeep = Color(0xFF1C0A04); // nền nâu tối
+const _kNavy = Color(0xFF2D1408); // nền phụ
+const _kGold = Color(0xFFF97316); // cam chủ đạo
 const _kGoldLight = Color(0xFFFDBA74); // cam nhạt
-const _kWhite   = Colors.white;
+const _kWhite = Colors.white;
 
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key});
@@ -55,9 +55,10 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseAnim = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_pageController.hasClients) return;
@@ -129,7 +130,8 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
             itemBuilder: (_, i) => Image.asset(
               _bannerImages[i],
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: _kNavy),
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: _kNavy),
             ),
           ),
 
@@ -254,9 +256,7 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
                       height: 8,
                       margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
-                        color: active
-                            ? _kGold
-                            : _kWhite.withValues(alpha: 0.4),
+                        color: active ? _kGold : _kWhite.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(99),
                       ),
                     );
@@ -360,13 +360,21 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
       ),
       child: Row(
         children: const [
-          Expanded(child: _StatItem(value: '500+', label: 'Phòng')),
+          Expanded(
+            child: _StatItem(value: '500+', label: 'Phòng'),
+          ),
           _StatDivider(),
-          Expanded(child: _StatItem(value: '98%', label: 'Hài lòng')),
+          Expanded(
+            child: _StatItem(value: '98%', label: 'Hài lòng'),
+          ),
           _StatDivider(),
-          Expanded(child: _StatItem(value: '24/7', label: 'Hỗ trợ')),
+          Expanded(
+            child: _StatItem(value: '24/7', label: 'Hỗ trợ'),
+          ),
           _StatDivider(),
-          Expanded(child: _StatItem(value: '5★', label: 'Chất lượng')),
+          Expanded(
+            child: _StatItem(value: '5★', label: 'Chất lượng'),
+          ),
         ],
       ),
     );
@@ -436,18 +444,36 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
           builder: (context, constraints) {
             final cols = constraints.maxWidth >= 600 ? 3 : 2;
             const items = [
-              _ServiceData(Icons.king_bed_rounded, 'Phòng cao cấp',
-                  'Giường êm, nội thất hiện đại, tầm nhìn thoáng đãng.'),
-              _ServiceData(Icons.restaurant_menu_rounded, 'Ẩm thực',
-                  'Thực đơn phong phú, nguyên liệu tươi ngon mỗi ngày.'),
-              _ServiceData(Icons.spa_rounded, 'Spa & Thư giãn',
-                  'Liệu trình thư giãn chuyên nghiệp sau mỗi chuyến đi.'),
-              _ServiceData(Icons.directions_car_rounded, 'Đưa đón',
-                  'Xe sang trọng phục vụ đón tiễn sân bay 24/7.'),
-              _ServiceData(Icons.pool_rounded, 'Hồ bơi',
-                  'Không gian bơi lội rộng rãi, thoáng mát cả ngày.'),
-              _ServiceData(Icons.room_service_rounded, 'Room Service',
-                  'Phục vụ tận phòng mọi yêu cầu trong 15 phút.'),
+              _ServiceData(
+                Icons.king_bed_rounded,
+                'Phòng cao cấp',
+                'Giường êm, nội thất hiện đại, tầm nhìn thoáng đãng.',
+              ),
+              _ServiceData(
+                Icons.restaurant_menu_rounded,
+                'Ẩm thực',
+                'Thực đơn phong phú, nguyên liệu tươi ngon mỗi ngày.',
+              ),
+              _ServiceData(
+                Icons.spa_rounded,
+                'Spa & Thư giãn',
+                'Liệu trình thư giãn chuyên nghiệp sau mỗi chuyến đi.',
+              ),
+              _ServiceData(
+                Icons.directions_car_rounded,
+                'Đưa đón',
+                'Xe sang trọng phục vụ đón tiễn sân bay 24/7.',
+              ),
+              _ServiceData(
+                Icons.pool_rounded,
+                'Hồ bơi',
+                'Không gian bơi lội rộng rãi, thoáng mát cả ngày.',
+              ),
+              _ServiceData(
+                Icons.room_service_rounded,
+                'Dịch vụ tận phòng',
+                'Phục vụ tận phòng mọi yêu cầu trong 15 phút.',
+              ),
             ];
             return GridView.builder(
               shrinkWrap: true,
@@ -473,18 +499,12 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: _kGold.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
+        border: Border.all(color: _kGold.withValues(alpha: 0.3), width: 1.5),
         borderRadius: BorderRadius.circular(28),
         gradient: RadialGradient(
           center: Alignment.topLeft,
           radius: 1.5,
-          colors: [
-            _kGold.withValues(alpha: 0.10),
-            Colors.transparent,
-          ],
+          colors: [_kGold.withValues(alpha: 0.10), Colors.transparent],
         ),
       ),
       child: Column(
@@ -541,11 +561,8 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
               Row(
                 children: List.generate(
                   5,
-                  (_) => const Icon(
-                    Icons.star_rounded,
-                    color: _kGold,
-                    size: 18,
-                  ),
+                  (_) =>
+                      const Icon(Icons.star_rounded, color: _kGold, size: 18),
                 ),
               ),
             ],
@@ -621,10 +638,7 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 36,
-                vertical: 17,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 17),
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A),
                 borderRadius: BorderRadius.circular(99),
@@ -639,11 +653,7 @@ class _IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.explore_rounded,
-                    color: _kGold,
-                    size: 20,
-                  ),
+                  Icon(Icons.explore_rounded, color: _kGold, size: 20),
                   SizedBox(width: 10),
                   Text(
                     'Khám phá dịch vụ',
@@ -709,14 +719,14 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(
-          color: _kGold,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2,
-        ),
-      );
+    text,
+    style: const TextStyle(
+      color: _kGold,
+      fontSize: 11,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 2,
+    ),
+  );
 }
 
 class _StatItem extends StatelessWidget {
@@ -753,10 +763,10 @@ class _StatDivider extends StatelessWidget {
   const _StatDivider();
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 32,
-        color: const Color(0xFF111827).withValues(alpha: 0.25),
-      );
+    width: 1,
+    height: 32,
+    color: const Color(0xFF111827).withValues(alpha: 0.25),
+  );
 }
 
 class _FeatureChip extends StatelessWidget {

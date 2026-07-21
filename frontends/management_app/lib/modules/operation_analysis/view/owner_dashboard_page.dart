@@ -32,7 +32,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Owner Dashboard',
+        title: const Text('Bảng điều khiển chủ khách sạn',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,

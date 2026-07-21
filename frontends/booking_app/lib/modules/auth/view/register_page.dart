@@ -162,7 +162,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Booking',
+                    'Đặt phòng',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 46,
@@ -172,7 +172,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Hotel Management System',
+                    'Hệ thống quản lý khách sạn',
                     style: TextStyle(
                       color: Color(0xFFD7DEEE),
                       fontSize: 18,

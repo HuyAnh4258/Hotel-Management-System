@@ -88,7 +88,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'Hotel Management System',
+                    'Hệ thống quản lý khách sạn',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white60,

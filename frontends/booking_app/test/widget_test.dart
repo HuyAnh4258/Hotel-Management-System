@@ -8,7 +8,9 @@ import 'package:booking_app/modules/booking/viewmodel/booking_viewmodel.dart';
 void main() {
   tearDown(Get.reset);
 
-  testWidgets('Booking app renders home shell', (WidgetTester tester) async {
+  testWidgets('Ứng dụng booking hiển thị màn hình chính', (
+    WidgetTester tester,
+  ) async {
     Get.put(AuthViewModel());
 
     await tester.pumpWidget(
@@ -20,6 +22,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Search Rooms'), findsOneWidget);
+    expect(find.text('Tìm phòng'), findsWidgets);
   });
 }

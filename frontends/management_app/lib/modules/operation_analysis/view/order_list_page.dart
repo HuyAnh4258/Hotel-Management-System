@@ -50,7 +50,7 @@ class _OrderListPageState extends State<OrderListPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quản lý Order Dịch Vụ',
+        title: const Text('Quản lý đơn dịch vụ',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
@@ -144,7 +144,7 @@ class _OrderListTabState extends State<_OrderListTab> {
               if (order.status == 'PENDING') ...[
                 ListTile(
                   leading: const Icon(Icons.play_arrow, color: Colors.blue),
-                  title: const Text('Bắt đầu thực hiện (IN PROGRESS)'),
+                  title: const Text('Bắt đầu xử lý'),
                   onTap: () {
                     Navigator.pop(context);
                     _updateStatus(order.orderId, 'IN_PROGRESS');
@@ -152,7 +152,7 @@ class _OrderListTabState extends State<_OrderListTab> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.cancel, color: Colors.red),
-                  title: const Text('Hủy order (CANCEL)'),
+                  title: const Text('Hủy đơn'),
                   onTap: () {
                     Navigator.pop(context);
                     _updateStatus(order.orderId, 'CANCELLED');
@@ -162,7 +162,7 @@ class _OrderListTabState extends State<_OrderListTab> {
               if (order.status == 'IN_PROGRESS') ...[
                 ListTile(
                   leading: const Icon(Icons.check_circle, color: Colors.green),
-                  title: const Text('Hoàn thành & Tiêu hao (COMPLETED)'),
+                  title: const Text('Hoàn thành và ghi nhận tiêu hao'),
                   onTap: () {
                     Navigator.pop(context);
                     _updateStatus(order.orderId, 'COMPLETED');
@@ -172,7 +172,7 @@ class _OrderListTabState extends State<_OrderListTab> {
               if (order.status == 'COMPLETED' || order.status == 'CANCELLED')
                 const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Text('Không thể thay đổi trạng thái của order này nữa.'),
+                  child: Text('Không thể thay đổi trạng thái của đơn này nữa.'),
                 ),
             ],
           ),
@@ -202,7 +202,7 @@ class _OrderListTabState extends State<_OrderListTab> {
                 Padding(
                   padding: EdgeInsets.only(top: 100),
                   child: Center(
-                    child: Text('Không có order nào trong trạng thái này',
+                    child: Text('Không có đơn nào trong trạng thái này',
                         style: TextStyle(color: Colors.grey, fontSize: 16)),
                   ),
                 ),

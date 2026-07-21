@@ -199,8 +199,21 @@ public class ServiceOrderService {
     @Transactional
     public ServiceOrderSummary cancelOrder(String orderId) {
         ServiceOrderSummary order = getOrder(orderId);
-        if ("COMPLETED".equalsIgnoreCase(order.status())) {
+        String currentStatus = order.status() == null ? "" : order.status().trim().toUpperCase();
+        if ("PENDING".equals(currentStatus)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Order must be approved by receptionist before it can be cancelled"
+            );
+        }
+        if ("COMPLETED".equals(currentStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed order cannot be cancelled");
+        }
+        if ("CANCELLED".equals(currentStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is already cancelled");
+        }
+        if (!"IN_PROGRESS".equals(currentStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order cannot be cancelled in current status");
         }
         return updateOrderStatus(orderId, "CANCELLED");
     }

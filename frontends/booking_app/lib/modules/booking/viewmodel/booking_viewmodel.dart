@@ -125,10 +125,7 @@ class BookingApi {
   }
 
   static Future<BookingSummary> requestCancelBooking(String bookingId) async {
-    final response = await _dio.patch(
-      '/$bookingId/status',
-      queryParameters: {'status': 'WAITING_APPROVAL'},
-    );
+    final response = await _dio.patch('/$bookingId/cancel-request');
     return BookingSummary.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -201,6 +198,19 @@ class BookingApi {
         .toList();
   }
 
+  static Future<List<ServiceOrderModel>> getServiceOrdersByBooking(
+    String bookingId,
+  ) async {
+    final response = await _serviceOrderDio.get('/booking/$bookingId');
+    final data = response.data as List<dynamic>;
+    return data
+        .map(
+          (e) =>
+              ServiceOrderModel.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+  }
+
   static Future<ServiceOrderModel> createServiceOrder(
     CreateServiceOrderPayload payload,
   ) async {
@@ -215,6 +225,21 @@ class BookingApi {
     return ServiceOrderModel.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
+  }
+
+  static String errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      if (data is String && data.isNotEmpty) {
+        return data;
+      }
+      return error.message ?? 'Request failed';
+    }
+
+    return error.toString();
   }
 }
 
@@ -317,21 +342,19 @@ class BookingSummary {
 
   bool canCheckIn(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckin.startsWith(today) &&
-        (normalizedStatus == 'PENDING' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'PENDING' ||
+        normalizedStatus == 'CONFIRMED' ||
+        normalizedStatus == 'CANCEL_REJECTED';
   }
 
   bool canCheckOut(String today) {
     final normalizedStatus = status.toUpperCase();
-    return expectedCheckout.startsWith(today) &&
-        (normalizedStatus == 'CHECKED_IN' ||
-            normalizedStatus == 'CANCEL_REJECTED');
+    return normalizedStatus == 'CHECKED_IN';
   }
 
   bool get canRequestCancel {
     final normalizedStatus = status.toUpperCase();
-    return normalizedStatus == 'PENDING' || normalizedStatus == 'CHECKED_IN';
+    return normalizedStatus == 'PENDING';
   }
 
   bool get hasReachedCheckinDeadline {
@@ -478,7 +501,7 @@ class ServiceOrderModel {
 
   bool get canGuestCancel {
     final normalized = status.toUpperCase();
-    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+    return normalized == 'IN_PROGRESS';
   }
 
   factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {

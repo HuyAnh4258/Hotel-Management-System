@@ -274,10 +274,14 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
 
-        if (isPastCancellationDeadline(booking)) {
+        String status = booking.getStatus() == null ? "" : booking.getStatus().trim().toUpperCase();
+        if ("WAITING_APPROVAL".equals(status)) {
+            return toBookingSummary(booking);
+        }
+        if (!"PENDING".equals(status)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Đã quá hạn đặt phòng"
+                    "Only pending bookings can be cancelled"
             );
         }
 
@@ -556,11 +560,6 @@ public class BookingService {
 
     private LocalDateTime toNoon(LocalDate date) {
         return date.atTime(LocalTime.NOON);
-    }
-
-    private boolean isPastCancellationDeadline(Booking booking) {
-        LocalDateTime checkinDeadline = booking.getExpectedCheckin();
-        return checkinDeadline != null && !LocalDateTime.now().isBefore(checkinDeadline);
     }
 
     private void releaseRoomsForBooking(String bookingId) {
