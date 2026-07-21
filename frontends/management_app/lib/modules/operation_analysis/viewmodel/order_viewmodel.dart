@@ -14,12 +14,10 @@ class OrderApi {
   }
 
   static final Dio _dio = Dio(
-    BaseOptions(
-      headers: {'Content-Type': 'application/json'},
-    ),
+    BaseOptions(headers: {'Content-Type': 'application/json'}),
   );
 
-  /// Fetch orders by status (e.g., "PENDING", "IN_PROGRESS", "COMPLETED", "ALL")
+  /// Fetch orders by status (e.g., "APPROVED", "IN_PROGRESS", "COMPLETED", "ALL")
   static Future<List<OrderModel>> getOrders(String status) async {
     final response = await _dio.get(
       _baseUrl,
@@ -32,14 +30,15 @@ class OrderApi {
   }
 
   /// Update order status
-  static Future<OrderModel> updateStatus(String orderId, String newStatus) async {
+  static Future<OrderModel> updateStatus(
+    String orderId,
+    String newStatus,
+  ) async {
     final response = await _dio.put(
       '$_baseUrl/$orderId/status',
       data: {'status': newStatus},
     );
-    return OrderModel.fromJson(
-      Map<String, dynamic>.from(response.data as Map),
-    );
+    return OrderModel.fromJson(Map<String, dynamic>.from(response.data as Map));
   }
 }
 

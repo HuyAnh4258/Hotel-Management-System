@@ -501,7 +501,7 @@ class ServiceOrderModel {
 
   bool get canGuestCancel {
     final normalized = status.toUpperCase();
-    return normalized == 'IN_PROGRESS';
+    return normalized == 'PENDING';
   }
 
   factory ServiceOrderModel.fromJson(Map<String, dynamic> json) {

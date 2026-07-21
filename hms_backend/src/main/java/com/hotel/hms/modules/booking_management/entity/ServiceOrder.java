@@ -34,7 +34,7 @@ public class ServiceOrder {
     private BigDecimal totalAmount;
 
     @Column(name = "Status", length = 20, nullable = false)
-    private String status = "PENDING"; // PENDING|IN_PROGRESS|COMPLETED|CANCELLED
+    private String status = "PENDING"; // PENDING|APPROVED|IN_PROGRESS|COMPLETED|CANCELLED
 
     @Column(name = "OrderedAt", nullable = false)
     private LocalDateTime orderedAt;

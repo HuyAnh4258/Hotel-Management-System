@@ -33,6 +33,7 @@ public class ServiceOrderService {
 
     private static final List<String> UPDATE_STATUSES = List.of(
             "PENDING",
+            "APPROVED",
             "IN_PROGRESS",
             "COMPLETED",
             "CANCELLED"
@@ -81,7 +82,13 @@ public class ServiceOrderService {
         ServiceOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        order.setStatus(newStatus.toUpperCase());
+        String normalizedStatus = newStatus.trim().toUpperCase();
+        if (!UPDATE_STATUSES.contains(normalizedStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported order status");
+        }
+        validateStatusTransition(order.getStatus(), normalizedStatus);
+
+        order.setStatus(normalizedStatus);
         order = orderRepository.save(order);
 
         ServiceOrder updatedOrder = orderRepository.findOrdersByStatus(null).stream()
@@ -200,19 +207,13 @@ public class ServiceOrderService {
     public ServiceOrderSummary cancelOrder(String orderId) {
         ServiceOrderSummary order = getOrder(orderId);
         String currentStatus = order.status() == null ? "" : order.status().trim().toUpperCase();
-        if ("PENDING".equals(currentStatus)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Order must be approved by receptionist before it can be cancelled"
-            );
-        }
         if ("COMPLETED".equals(currentStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed order cannot be cancelled");
         }
         if ("CANCELLED".equals(currentStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is already cancelled");
         }
-        if (!"IN_PROGRESS".equals(currentStatus)) {
+        if (!List.of("PENDING", "APPROVED", "IN_PROGRESS").contains(currentStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order cannot be cancelled in current status");
         }
         return updateOrderStatus(orderId, "CANCELLED");
@@ -225,6 +226,7 @@ public class ServiceOrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported order status");
         }
         ServiceOrderSummary currentOrder = getOrder(orderId);
+        validateStatusTransition(currentOrder.status(), normalizedStatus);
 
         if ("COMPLETED".equals(normalizedStatus) && !"COMPLETED".equals(currentOrder.status() == null ? "" : currentOrder.status().trim().toUpperCase())) {
             deductInventoryForOrder(orderId);
@@ -245,6 +247,27 @@ public class ServiceOrderService {
 
         recalculateAndStoreBookingTotal(currentOrder.bookingId());
         return getOrder(orderId);
+    }
+
+    private void validateStatusTransition(String currentStatus, String nextStatus) {
+        String current = currentStatus == null ? "" : currentStatus.trim().toUpperCase();
+        if (current.equals(nextStatus)) {
+            return;
+        }
+
+        boolean valid = switch (current) {
+            case "PENDING" -> List.of("APPROVED", "CANCELLED").contains(nextStatus);
+            case "APPROVED" -> List.of("IN_PROGRESS", "CANCELLED").contains(nextStatus);
+            case "IN_PROGRESS" -> List.of("COMPLETED", "CANCELLED").contains(nextStatus);
+            default -> false;
+        };
+
+        if (!valid) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid order status transition from " + current + " to " + nextStatus
+            );
+        }
     }
 
     // ================================================================

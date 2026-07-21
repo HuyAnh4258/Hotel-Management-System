@@ -670,6 +670,7 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
   static const _statusFilters = [
     'ALL',
     'PENDING',
+    'APPROVED',
     'IN_PROGRESS',
     'COMPLETED',
     'CANCELLED',
@@ -770,7 +771,7 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
                   _ServiceOrderHeader(
                     title: title,
                     subtitle:
-                        'Receptionist reviews pending orders, updates progress, and exports completed invoices.',
+                        'Receptionist approves pending service orders before service staff performs them.',
                     totalOrders: orders.length,
                   ),
                   const SizedBox(height: 12),
@@ -813,8 +814,8 @@ class _ServiceOrderStatusPageState extends State<ServiceOrderStatusPage> {
                         child: _UnifiedServiceOrderCard(
                           order: order,
                           onUpdate: (status) => _update(order, status),
-                          onCopyInvoice: order.status.toUpperCase() ==
-                                  'COMPLETED'
+                          onCopyInvoice:
+                              order.status.toUpperCase() == 'COMPLETED'
                               ? () => _copyInvoice(order)
                               : null,
                         ),
@@ -878,9 +879,7 @@ class _UnifiedServiceOrderCard extends StatelessWidget {
 List<String> _nextOrderStatuses(String currentStatus) {
   switch (currentStatus.toUpperCase()) {
     case 'PENDING':
-      return const ['IN_PROGRESS', 'CANCELLED'];
-    case 'IN_PROGRESS':
-      return const ['COMPLETED', 'CANCELLED'];
+      return const ['APPROVED', 'CANCELLED'];
     default:
       return const [];
   }
@@ -892,6 +891,8 @@ String _statusLabel(String status) {
       return 'Tất cả';
     case 'PENDING':
       return 'Đang chờ';
+    case 'APPROVED':
+      return 'Đã duyệt';
     case 'IN_PROGRESS':
       return 'Đang xử lý';
     case 'COMPLETED':
@@ -929,6 +930,8 @@ String _bookingStatusText(String status) {
 
 String _statusActionLabel(String status) {
   switch (status.toUpperCase()) {
+    case 'APPROVED':
+      return 'Duyệt đơn';
     case 'IN_PROGRESS':
       return 'Duyệt / Đang xử lý';
     case 'COMPLETED':
@@ -942,6 +945,8 @@ String _statusActionLabel(String status) {
 
 IconData _statusIcon(String status) {
   switch (status.toUpperCase()) {
+    case 'APPROVED':
+      return Icons.verified_rounded;
     case 'IN_PROGRESS':
       return Icons.play_arrow_rounded;
     case 'COMPLETED':
@@ -1109,11 +1114,14 @@ class _ServiceOrderWorkflowPageState extends State<_ServiceOrderWorkflowPage> {
           onCopy: () => _copyInvoice(order),
         );
       case _ServiceOrderWorkflowMode.requests:
-        return _RequestOrderCard(order: order);
+        return _RequestOrderCard(
+          order: order,
+          onApprove: () => _update(order, 'APPROVED'),
+        );
       case _ServiceOrderWorkflowMode.process:
         return _ProcessOrderCard(
           order: order,
-          onStart: order.status.toUpperCase() == 'PENDING'
+          onStart: order.status.toUpperCase() == 'APPROVED'
               ? () => _update(order, 'IN_PROGRESS')
               : null,
           onComplete: order.status.toUpperCase() == 'IN_PROGRESS'
@@ -1125,17 +1133,22 @@ class _ServiceOrderWorkflowPageState extends State<_ServiceOrderWorkflowPage> {
 }
 
 class _RequestOrderCard extends StatelessWidget {
-  const _RequestOrderCard({required this.order});
+  const _RequestOrderCard({required this.order, required this.onApprove});
 
   final ServiceOrderModel order;
+  final VoidCallback onApprove;
 
   @override
   Widget build(BuildContext context) {
     return _OrderInfoCard(
       order: order,
-      footer: const Text(
-        'Waiting for receptionist to process this request.',
-        style: TextStyle(fontWeight: FontWeight.w700),
+      footer: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: onApprove,
+          icon: const Icon(Icons.verified_rounded),
+          label: const Text('Duyệt đơn'),
+        ),
       ),
     );
   }
@@ -1282,9 +1295,9 @@ String _workflowSubtitle(_ServiceOrderWorkflowMode mode) {
     case _ServiceOrderWorkflowMode.invoice:
       return 'Receptionist exports invoices for completed service orders.';
     case _ServiceOrderWorkflowMode.requests:
-      return 'Receptionist views service orders waiting for processing.';
+      return 'Receptionist approves pending service orders.';
     case _ServiceOrderWorkflowMode.process:
-      return 'Receptionist starts pending orders and completes in-progress orders.';
+      return 'Service staff performs approved orders and completes active orders.';
   }
 }
 
@@ -1307,7 +1320,7 @@ bool _matchesWorkflow(_ServiceOrderWorkflowMode mode, ServiceOrderModel order) {
     case _ServiceOrderWorkflowMode.requests:
       return status == 'PENDING';
     case _ServiceOrderWorkflowMode.process:
-      return status == 'PENDING' || status == 'IN_PROGRESS';
+      return status == 'APPROVED' || status == 'IN_PROGRESS';
   }
 }
 
@@ -1317,7 +1330,9 @@ String _buildInvoiceText(ServiceOrderModel order) {
     ..writeln('HÓA ĐƠN DỊCH VỤ')
     ..writeln('Đơn: ${order.orderId}')
     ..writeln('Mã đặt phòng: ${order.bookingId}')
-    ..writeln('Khách hàng: ${order.guestName.isEmpty ? 'Chưa có' : order.guestName}')
+    ..writeln(
+      'Khách hàng: ${order.guestName.isEmpty ? 'Chưa có' : order.guestName}',
+    )
     ..writeln('SĐT: ${order.phone.isEmpty ? 'Chưa có' : order.phone}')
     ..writeln('Thời gian đặt: ${order.orderedAt}')
     ..writeln('Trạng thái: ${_serviceOrderStatusLabel(order.status)}')
@@ -1386,6 +1401,7 @@ class _ServiceOrderHeader extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ServiceOrderCard extends StatelessWidget {
   const _ServiceOrderCard({
     required this.order,
@@ -1399,6 +1415,8 @@ class _ServiceOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nextStatuses = _nextOrderStatuses(order.status);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1439,25 +1457,18 @@ class _ServiceOrderCard extends StatelessWidget {
               ),
             ),
           ],
-          if (canUpdate) ...[
+          if (canUpdate && nextStatuses.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  const [
-                    'PENDING',
-                    'IN_PROGRESS',
-                    'COMPLETED',
-                    'CANCELLED',
-                  ].map((status) {
-                    final selected = order.status.toUpperCase() == status;
-                    return ChoiceChip(
-                      label: Text(status),
-                      selected: selected,
-                      onSelected: selected ? null : (_) => onUpdate(status),
-                    );
-                  }).toList(),
+              children: nextStatuses.map((status) {
+                return ChoiceChip(
+                  label: Text(_statusActionLabel(status)),
+                  selected: false,
+                  onSelected: (_) => onUpdate(status),
+                );
+              }).toList(),
             ),
           ],
         ],
@@ -1472,6 +1483,8 @@ Color _serviceOrderStatusColor(String status) {
       return Colors.green;
     case 'CANCELLED':
       return Colors.red;
+    case 'APPROVED':
+      return Colors.teal;
     case 'IN_PROGRESS':
       return Colors.blue;
     default:
