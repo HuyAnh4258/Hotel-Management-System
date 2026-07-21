@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 
 class ApiConstants {
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8080/api';
-    }
+    if (kIsWeb) return 'http://localhost:8080/api';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api';
+    } catch (_) {}
     return 'http://localhost:8080/api';
   }
 
