@@ -1,11 +1,25 @@
 import 'package:dio/dio.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BookingApi {
   BookingApi._();
 
-  static const String baseUrl = 'http://10.0.2.2:8080/api/booking';
-  static const String serviceOrderBaseUrl =
-      'http://10.0.2.2:8080/api/service-orders';
+  static String get baseUrl {
+    if (kIsWeb) return 'http://localhost:8080/api/booking';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api/booking';
+    } catch (_) {}
+    return 'http://localhost:8080/api/booking';
+  }
+
+  static String get serviceOrderBaseUrl {
+    if (kIsWeb) return 'http://localhost:8080/api/orders';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api/orders';
+    } catch (_) {}
+    return 'http://localhost:8080/api/orders';
+  }
 
   static final Dio _dio = Dio(
     BaseOptions(

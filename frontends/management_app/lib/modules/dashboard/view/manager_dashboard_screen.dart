@@ -346,7 +346,7 @@ class ManagerDashboardScreen extends StatelessWidget {
         description: 'Hồ sơ & Phân công công việc',
         icon: Icons.people,
         themeColor: AppColors.warning,
-        onTap: () => Get.toNamed('/employees'),
+        onTap: () => Get.toNamed('/accounts'),
       ),
       // Pillar 5: Maintenance
       ActionCardWidget(
@@ -409,7 +409,9 @@ class ManagerDashboardScreen extends StatelessWidget {
       ),
       actions: [
         Obx(
-          () => Container(
+          () => GestureDetector(
+            onTap: () => Get.toNamed('/profile'),
+            child: Container(
             margin: const EdgeInsets.only(right: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -469,6 +471,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         ),
         Padding(
