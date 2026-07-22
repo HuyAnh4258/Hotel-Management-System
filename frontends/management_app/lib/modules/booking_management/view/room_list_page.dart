@@ -141,6 +141,7 @@ class _RoomListTab extends StatefulWidget {
 
 class _RoomListTabState extends State<_RoomListTab> {
   late Future<List<RoomModel>> _roomsFuture;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -339,106 +340,264 @@ class _RoomListTabState extends State<_RoomListTab> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => _loadRooms(),
-      child: FutureBuilder<List<RoomModel>>(
-        future: _roomsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}'));
-          }
-
-          final rooms = snapshot.data ?? [];
-          if (rooms.isEmpty) {
-            return ListView(
-              children: const [
-                Padding(
-                  padding: EdgeInsets.only(top: 100),
-                  child: Center(
-                    child: Text(
-                      'No rooms in this state.',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
+  void _showUpdateRoomModal(RoomModel room) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Cập nhật phòng', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 1)),
+                      child: const Text('[x]', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ),
                   ),
-                ),
-              ],
-            );
-          }
-
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 1)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('ACTIVE TASKS LIST (IN PROGRESS)', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text('Mã số phòng: ${room.roomId}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text('CURRENTLY ${widget.status}', style: const TextStyle(fontFamily: 'monospace', fontSize: 14)),
-                    const SizedBox(height: 16),
-                    DataTable(
-                      headingRowColor: WidgetStateProperty.all(Colors.grey.shade300),
-                      border: TableBorder.all(color: Colors.grey.shade400, width: 1),
-                      columns: const [
-                        DataColumn(label: Text('ROOM NUMBER', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('ROOM TYPE', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('START TIME', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('ASSIGNED TO', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('ACTION', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold))),
-                      ],
-                      rows: rooms.map((room) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(room.roomId, style: const TextStyle(fontFamily: 'monospace'))),
-                            DataCell(Text(room.roomTypeName, style: const TextStyle(fontFamily: 'monospace'))),
-                            DataCell(const Text('10:30 AM', style: TextStyle(fontFamily: 'monospace'))), // Mocked as per image
-                            DataCell(const Text('You', style: TextStyle(fontFamily: 'monospace'))), // Mocked as per image
-                            DataCell(
-                              Row(
-                                children: [
-                                  if (room.status == 'DIRTY') ...[
-                                    ElevatedButton(
-                                      onPressed: () => _updateStatus(room.roomId, 'CLEANING'),
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
-                                      child: const Text('[ Start Cleaning ]', style: TextStyle(fontFamily: 'monospace')),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ElevatedButton(
-                                      onPressed: () => _showMaintenanceForm(room),
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
-                                      child: const Text('[ Request Maint. ]', style: TextStyle(fontFamily: 'monospace')),
-                                    ),
-                                  ],
-                                  if (room.status == 'CLEANING')
-                                    ElevatedButton(
-                                      onPressed: () => _showMarkCleanConfirm(room),
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
-                                      child: const Text('[ Mark as Clean ]', style: TextStyle(fontFamily: 'monospace')),
-                                    ),
-                                  if (room.status == 'AVAILABLE' || room.status == 'MAINTENANCE')
-                                    const Text('No Action', style: TextStyle(fontFamily: 'monospace', color: Colors.grey)),
-                                ],
-                              )
-                            ),
-                          ]
-                        );
-                      }).toList(),
-                    ),
+                    Text('Hạng phòng: ${room.roomTypeName}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('Trạng thái: ${room.status}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 16),
+              if (room.status == 'DIRTY') ...[
+                _buildModalButton(
+                  icon: '🧹',
+                  label: 'Bắt đầu dọn dẹp',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updateStatus(room.roomId, 'CLEANING');
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildModalButton(
+                  icon: '🔧',
+                  label: 'Báo cáo bảo trì',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showMaintenanceForm(room);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (room.status == 'CLEANING') ...[
+                _buildModalButton(
+                  icon: '✅',
+                  label: 'Hoàn tất dọn dẹp',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showMarkCleanConfirm(room);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (room.status == 'AVAILABLE') ...[
+                _buildModalButton(
+                  icon: '🔧',
+                  label: 'Báo cáo bảo trì',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showMaintenanceForm(room);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              _buildModalButton(
+                icon: null,
+                label: 'Huỷ bỏ',
+                isCancel: true,
+                onTap: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModalButton({String? icon, required String label, required VoidCallback onTap, bool isCancel = false}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 1)),
+        child: Row(
+          mainAxisAlignment: isCancel ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
+          children: [
+            if (isCancel)
+              Text('[ $label ]', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16))
+            else ...[
+              Text('[ $icon ] $label', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('➔', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildRoomCard(RoomModel room) {
+    IconData iconData;
+    Color iconColor;
+    if (room.status == 'DIRTY') {
+      iconData = Icons.cleaning_services;
+      iconColor = Colors.brown;
+    } else if (room.status == 'CLEANING') {
+      iconData = Icons.wash;
+      iconColor = Colors.purpleAccent;
+    } else if (room.status == 'AVAILABLE') {
+      iconData = Icons.check_circle_outline;
+      iconColor = Colors.green;
+    } else {
+      iconData = Icons.build;
+      iconColor = Colors.grey;
+    }
+
+    return InkWell(
+      onTap: () => _showUpdateRoomModal(room),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade400,
+          border: Border.all(color: Colors.black, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(iconData, color: iconColor, size: 32),
+            const SizedBox(height: 8),
+            Text(room.roomId, style: const TextStyle(fontFamily: 'monospace', fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(room.roomTypeName, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black, width: 1),
+                color: Colors.grey.shade300,
+              ),
+              child: Text('[ ${room.status} ]', style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<RoomModel>>(
+      future: _roomsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}'));
+        }
+
+        final rooms = snapshot.data ?? [];
+        final filteredRooms = rooms.where((r) => r.roomId.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Text('Tìm: ', style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black),
+                        color: Colors.grey.shade300,
+                      ),
+                      child: TextField(
+                        style: const TextStyle(fontFamily: 'monospace'),
+                        decoration: const InputDecoration(
+                          hintText: 'Số phòng...',
+                          hintStyle: TextStyle(fontFamily: 'monospace', color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async => _loadRooms(),
+                child: filteredRooms.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          Padding(
+                            padding: EdgeInsets.only(top: 100),
+                            child: Center(
+                              child: Text(
+                                'No rooms found.',
+                                style: TextStyle(color: Colors.grey, fontSize: 16, fontFamily: 'monospace'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250,
+                          childAspectRatio: 1.1,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: filteredRooms.length,
+                        itemBuilder: (context, index) {
+                          return _buildRoomCard(filteredRooms[index]);
+                        },
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

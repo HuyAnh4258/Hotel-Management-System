@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/**").permitAll()
                 .requestMatchers("/api/rooms/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/error").permitAll()
                 // Admin only
                 .requestMatchers("/api/admin/**").hasAnyRole("OWNER", "MANAGER")
